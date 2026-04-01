@@ -1,19 +1,25 @@
 'use client';
 
 import { login } from '@/lib/api';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const COMPANY_DOMAIN = '@vital-area.com';
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const [nextPath, setNextPath] = useState('/calendar/month');
 
   const [loginId, setLoginId] = useState('yamada');
   const [password, setPassword] = useState('password');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    setNextPath(params.get('next') || '/calendar/month');
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +55,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace(searchParams.get('next') || '/calendar/month');
+      router.replace(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ログインに失敗しました');
     } finally {
