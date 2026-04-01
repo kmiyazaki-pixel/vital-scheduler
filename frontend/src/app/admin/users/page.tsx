@@ -7,17 +7,26 @@ import { useEffect, useState } from 'react';
 
 const COMPANY_DOMAIN = '@vital-area.com';
 
+type UserRole = 'admin' | 'member';
+
+type UserForm = {
+  name: string;
+  loginId: string;
+  password: string;
+  role: UserRole;
+};
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<UserForm>({
     name: '',
     loginId: '',
     password: '',
-    role: 'member' as const
+    role: 'member'
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -166,7 +175,7 @@ export default function AdminUsersPage() {
             <span>権限</span>
             <select
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as 'admin' | 'member' })}
+              onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
               style={input}
               disabled={submitting}
             >
