@@ -43,10 +43,7 @@ export default function MonthPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const visibleCalendars = useMemo(
-    () => calendars.filter((calendar) => calendar.type !== 'department'),
-    [calendars]
-  );
+  const visibleCalendars = useMemo(() => calendars, [calendars]);
 
   const editingEvent = useMemo(
     () => events.find((event) => event.id === editingEventId) ?? null,
@@ -96,9 +93,8 @@ export default function MonthPage() {
         const data = await fetchCalendars();
         setCalendars(data);
 
-        const filtered = data.filter((calendar) => calendar.type !== 'department');
-        if (filtered.length > 0) {
-          setSelectedCalendarId((prev) => prev ?? filtered[0].id);
+        if (data.length > 0) {
+          setSelectedCalendarId((prev) => prev ?? data[0].id);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'カレンダー取得に失敗しました');
