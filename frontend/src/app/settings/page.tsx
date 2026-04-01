@@ -2,13 +2,12 @@
 
 import { SchedulerShell } from '@/components/SchedulerShell';
 import { changeMyPassword } from '@/lib/api';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const forcePasswordChange = searchParams.get('forcePasswordChange') === '1';
+  const [forcePasswordChange, setForcePasswordChange] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -16,6 +15,12 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    setForcePasswordChange(params.get('forcePasswordChange') === '1');
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
