@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { Category } from '@/lib/types';
+
 type EventFormValue = {
   title: string;
-  category: string;
+  category: Category;
   memo: string;
   date: string;
   startHour: number;
@@ -22,7 +24,7 @@ type EventModalProps = {
   onSubmit: (value: EventFormValue) => Promise<void> | void;
 };
 
-const categoryOptions = [
+const categoryOptions: { value: Category; label: string }[] = [
   { value: 'meeting', label: '会議' },
   { value: 'work', label: '作業' },
   { value: 'review', label: '確認' },
@@ -41,7 +43,7 @@ export function EventModal({
   onSubmit
 }: EventModalProps) {
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('work');
+  const [category, setCategory] = useState<Category>('work');
   const [memo, setMemo] = useState('');
   const [date, setDate] = useState(initialDate);
   const [startHour, setStartHour] = useState(9);
@@ -109,7 +111,9 @@ export function EventModal({
       <div style={modal} onClick={(e) => e.stopPropagation()}>
         <div style={header}>
           <h3 style={{ margin: 0 }}>{mode === 'create' ? '予定を追加' : '予定を編集'}</h3>
-          <button type="button" onClick={onClose} style={closeButton}>×</button>
+          <button type="button" onClick={onClose} style={closeButton}>
+            ×
+          </button>
         </div>
 
         <div style={field}>
@@ -210,7 +214,12 @@ export function EventModal({
             <button type="button" onClick={onClose} style={ghostButton} disabled={loading}>
               キャンセル
             </button>
-            <button type="button" onClick={handleSubmit} style={loading ? disabledButton : primaryButton} disabled={loading}>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              style={loading ? disabledButton : primaryButton}
+              disabled={loading}
+            >
               {loading ? '保存中...' : '保存'}
             </button>
           </div>
