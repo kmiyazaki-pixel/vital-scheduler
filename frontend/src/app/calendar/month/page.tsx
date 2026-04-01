@@ -4,7 +4,7 @@ import { SchedulerShell } from '@/components/SchedulerShell';
 import { MonthCalendar } from '@/components/MonthCalendar';
 import { EventModal } from '@/components/EventModal';
 import { createEvent, deleteEvent, fetchCalendars, fetchEvents, updateEvent } from '@/lib/api';
-import { CalendarSummary, EventItem } from '@/lib/types';
+import { CalendarSummary,　Category, EventItem } from '@/lib/types';
 import { useEffect, useMemo, useState } from 'react';
 
 type MonthEventView = {
@@ -16,7 +16,7 @@ type MonthEventView = {
 
 type EventFormValue = {
   title: string;
-  category: string;
+  category: Category;
   memo: string;
   date: string;
   startHour: number;
