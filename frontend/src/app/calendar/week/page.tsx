@@ -4,7 +4,7 @@ import { SchedulerShell } from '@/components/SchedulerShell';
 import { WeekCalendar } from '@/components/WeekCalendar';
 import { EventModal } from '@/components/EventModal';
 import { createEvent, deleteEvent, fetchCalendars, fetchEvents, updateEvent } from '@/lib/api';
-import { CalendarSummary, EventItem } from '@/lib/types';
+import { CalendarSummary, Category, EventItem } from '@/lib/types';
 import { useEffect, useMemo, useState } from 'react';
 
 type WeekEventView = {
@@ -18,7 +18,7 @@ type WeekEventView = {
 
 type EventFormValue = {
   title: string;
-  category: string;
+  category: Category;
   memo: string;
   date: string;
   startHour: number;
@@ -26,10 +26,7 @@ type EventFormValue = {
 };
 
 export default function WeekPage() {
-  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
-  const [selectedDate, setSelectedDate] = useState(() => toDateKey(new Date()));
-  const [defaultStartHour, setDefaultStartHour] = useState(9);
-
+  const [currentDate, setCurrentDate] = useState(() => new Date());
   const [calendars, setCalendars] = useState<CalendarSummary[]>([]);
   const [selectedCalendarId, setSelectedCalendarId] = useState<number | null>(null);
 
@@ -39,14 +36,12 @@ export default function WeekPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => toDateKey(new Date()));
 
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const visibleCalendars = useMemo(
-    () => calendars.filter((calendar) => calendar.type !== 'department'),
-    [calendars]
-  );
+  const visibleCalendars = useMemo(() => calendars, [calendars]);
 
   const editingEvent = useMemo(
     () => events.find((event) => event.id === editingEventId) ?? null,
@@ -69,19 +64,32 @@ export default function WeekPage() {
   }, [editingEvent]);
 
   const weekRange = useMemo(() => {
-    const from = new Date(weekStart);
-    const to = new Date(weekStart);
-    to.setDate(to.getDate() + 6);
+    const start = startOfWeek(currentDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
     return {
-      from: toDateKey(from),
-      to: toDateKey(to)
+      from: toDateKey(start),
+      to: toDateKey(end)
     };
-  }, [weekStart]);
+  }, [currentDate]);
+
+  const weekDays = useMemo(() => {
+    const start = startOfWeek(currentDate);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return {
+        date,
+        dateKey: toDateKey(date)
+      };
+    });
+  }, [currentDate]);
 
   const weekEvents: WeekEventView[] = useMemo(() => {
     return events.map((event) => {
       const start = new Date(event.startAt);
       const end = new Date(event.endAt);
+
       return {
         id: event.id,
         title: event.title,
@@ -93,15 +101,18 @@ export default function WeekPage() {
     });
   }, [events]);
 
+  const selectedDateEvents = useMemo(() => {
+    return events.filter((event) => event.startAt.slice(0, 10) === selectedDate);
+  }, [events, selectedDate]);
+
   useEffect(() => {
     const loadCalendars = async () => {
       try {
         const data = await fetchCalendars();
         setCalendars(data);
 
-        const filtered = data.filter((calendar) => calendar.type !== 'department');
-        if (filtered.length > 0) {
-          setSelectedCalendarId((prev) => prev ?? filtered[0].id);
+        if (data.length > 0) {
+          setSelectedCalendarId((prev) => prev ?? data[0].id);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'カレンダー取得に失敗しました');
@@ -136,17 +147,17 @@ export default function WeekPage() {
     setEvents(data);
   };
 
-  const openCreateModal = (dateKey?: string, hour?: number) => {
+  const openCreateModal = (dateKey?: string) => {
+    if (dateKey) {
+      setSelectedDate(dateKey);
+    }
     setEditingEventId(null);
-    if (dateKey) setSelectedDate(dateKey);
-    if (typeof hour === 'number') setDefaultStartHour(hour);
     setModalOpen(true);
   };
 
   const openEditModal = (eventId: number) => {
     const target = events.find((event) => event.id === eventId);
     if (!target) return;
-
     setSelectedDate(target.startAt.slice(0, 10));
     setEditingEventId(eventId);
     setModalOpen(true);
@@ -254,42 +265,63 @@ export default function WeekPage() {
           <div style={panel}>読み込み中...</div>
         ) : (
           <WeekCalendar
-            weekStart={weekStart}
+            currentDate={currentDate}
+            days={weekDays}
             events={weekEvents}
-            onPrevWeek={() => {
-              const prev = new Date(weekStart);
-              prev.setDate(prev.getDate() - 7);
-              setWeekStart(prev);
-            }}
-            onNextWeek={() => {
-              const next = new Date(weekStart);
-              next.setDate(next.getDate() + 7);
-              setWeekStart(next);
-            }}
+            selectedDate={selectedDate}
+            onSelectDate={(dateKey) => setSelectedDate(dateKey)}
+            onPrevWeek={() => setCurrentDate(addDays(currentDate, -7))}
+            onNextWeek={() => setCurrentDate(addDays(currentDate, 7))}
             onToday={() => {
               const today = new Date();
-              setWeekStart(getWeekStart(today));
+              setCurrentDate(today);
               setSelectedDate(toDateKey(today));
             }}
             onAdd={openCreateModal}
             onEventClick={openEditModal}
           />
         )}
+
+        <div style={panel}>
+          <div style={sideHeader}>
+            <h2 style={{ margin: 0, fontSize: 18 }}>{formatSelectedDate(selectedDate)}</h2>
+          </div>
+
+          {selectedDateEvents.length === 0 ? (
+            <div style={{ color: '#8f8a81' }}>この日の予定はありません。</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {selectedDateEvents.map((event) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => openEditModal(event.id)}
+                  style={eventCardButton}
+                >
+                  <div style={eventCard}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ fontWeight: 700 }}>{event.title}</div>
+                      <div style={{ color: '#8f8a81', fontSize: 13 }}>
+                        {formatTime(event.startAt)} - {formatTime(event.endAt)}
+                      </div>
+                    </div>
+                    <div style={{ color: '#6B6760', fontSize: 13 }}>
+                      {formatCategory(event.category)}
+                    </div>
+                    {event.memo && <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{event.memo}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <EventModal
         open={modalOpen}
         mode={editingEvent ? 'edit' : 'create'}
         initialDate={editingEvent ? editingEvent.startAt.slice(0, 10) : selectedDate}
-        initialValue={
-          editingEvent
-            ? modalInitialValue
-            : {
-                date: selectedDate,
-                startHour: defaultStartHour,
-                endHour: defaultStartHour + 1
-              }
-        }
+        initialValue={modalInitialValue}
         loading={saving}
         onClose={closeModal}
         onDelete={editingEvent ? handleDelete : undefined}
@@ -297,14 +329,6 @@ export default function WeekPage() {
       />
     </SchedulerShell>
   );
-}
-
-function getWeekStart(date: Date) {
-  const result = new Date(date);
-  const day = result.getDay();
-  result.setHours(0, 0, 0, 0);
-  result.setDate(result.getDate() - day);
-  return result;
 }
 
 function toDateKey(date: Date) {
@@ -316,6 +340,54 @@ function toDateKey(date: Date) {
 
 function toOffsetDateTime(date: string, hour: number) {
   return `${date}T${String(hour).padStart(2, '0')}:00:00+09:00`;
+}
+
+function startOfWeek(date: Date) {
+  const copied = new Date(date);
+  const day = copied.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  copied.setDate(copied.getDate() + diff);
+  copied.setHours(0, 0, 0, 0);
+  return copied;
+}
+
+function addDays(date: Date, days: number) {
+  const copied = new Date(date);
+  copied.setDate(copied.getDate() + days);
+  return copied;
+}
+
+function formatSelectedDate(dateKey: string) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('ja-JP', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  });
+}
+
+function formatTime(value: string) {
+  const date = new Date(value);
+  return date.toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function formatCategory(category: string) {
+  switch (category) {
+    case 'meeting':
+      return '会議';
+    case 'work':
+      return '作業';
+    case 'review':
+      return '確認';
+    case 'personal':
+      return '個人';
+    default:
+      return 'その他';
+  }
 }
 
 const topBar: React.CSSProperties = {
@@ -350,6 +422,30 @@ const panel: React.CSSProperties = {
   border: '1px solid rgba(0,0,0,0.12)',
   borderRadius: 16,
   padding: 16
+};
+
+const sideHeader: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12
+};
+
+const eventCardButton: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  padding: 0,
+  textAlign: 'left',
+  cursor: 'pointer'
+};
+
+const eventCard: React.CSSProperties = {
+  border: '1px solid rgba(0,0,0,0.08)',
+  borderRadius: 12,
+  padding: 12,
+  background: '#fffdfa',
+  display: 'grid',
+  gap: 6
 };
 
 const successStyle: React.CSSProperties = {
