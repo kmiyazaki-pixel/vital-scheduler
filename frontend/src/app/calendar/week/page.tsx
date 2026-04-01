@@ -63,6 +63,8 @@ export default function WeekPage() {
     };
   }, [editingEvent]);
 
+  const weekStart = useMemo(() => startOfWeek(currentDate), [currentDate]);
+
   const weekRange = useMemo(() => {
     const start = startOfWeek(currentDate);
     const end = new Date(start);
@@ -71,18 +73,6 @@ export default function WeekPage() {
       from: toDateKey(start),
       to: toDateKey(end)
     };
-  }, [currentDate]);
-
-  const weekDays = useMemo(() => {
-    const start = startOfWeek(currentDate);
-    return Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(start);
-      date.setDate(start.getDate() + index);
-      return {
-        date,
-        dateKey: toDateKey(date)
-      };
-    });
   }, [currentDate]);
 
   const weekEvents: WeekEventView[] = useMemo(() => {
@@ -147,10 +137,11 @@ export default function WeekPage() {
     setEvents(data);
   };
 
-  const openCreateModal = (dateKey?: string) => {
+  const openCreateModal = (dateKey?: string, hour?: number) => {
     if (dateKey) {
       setSelectedDate(dateKey);
     }
+
     setEditingEventId(null);
     setModalOpen(true);
   };
@@ -265,11 +256,8 @@ export default function WeekPage() {
           <div style={panel}>読み込み中...</div>
         ) : (
           <WeekCalendar
-            currentDate={currentDate}
-            days={weekDays}
+            weekStart={weekStart}
             events={weekEvents}
-            selectedDate={selectedDate}
-            onSelectDate={(dateKey) => setSelectedDate(dateKey)}
             onPrevWeek={() => setCurrentDate(addDays(currentDate, -7))}
             onNextWeek={() => setCurrentDate(addDays(currentDate, 7))}
             onToday={() => {
