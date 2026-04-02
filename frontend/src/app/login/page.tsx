@@ -1,6 +1,6 @@
 'use client';
 
-import { login } from '@/lib/api';
+import { login, setToken } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -49,6 +49,8 @@ export default function LoginPage() {
     try {
       const email = `${normalizedLoginId}${COMPANY_DOMAIN}`;
       const result = await login({ email, password });
+
+      setToken(result.token);
 
       if (result.user.passwordChangeRequired) {
         router.replace('/settings?forcePasswordChange=1');
@@ -101,7 +103,11 @@ export default function LoginPage() {
 
           {error && <div style={errorStyle}>{error}</div>}
 
-          <button type="submit" style={loading ? disabledButtonStyle : buttonStyle} disabled={loading}>
+          <button
+            type="submit"
+            style={loading ? disabledButtonStyle : buttonStyle}
+            disabled={loading}
+          >
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
         </form>
