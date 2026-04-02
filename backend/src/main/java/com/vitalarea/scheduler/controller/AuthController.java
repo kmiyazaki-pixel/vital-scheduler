@@ -1,84 +1,81 @@
 package com.vitalarea.scheduler.controller;
 
-import com.vitalarea.scheduler.dto.AuthResponse;
 import com.vitalarea.scheduler.dto.LoginRequest;
+import com.vitalarea.scheduler.dto.LoginResponse;
+import com.vitalarea.scheduler.dto.UserResponse;
+import com.vitalarea.scheduler.entity.User;
+import com.vitalarea.scheduler.repository.UserRepository;
+import com.vitalarea.scheduler.security.JwtService;
 import com.vitalarea.scheduler.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
-    private static final String COMPANY_DOMAIN = "@vital-area.com";
 
     private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
     private final UserService userService;
+    private final JwtService jwtService;
+
+    public AuthController(
+            AuthenticationManager authenticationManager,
+            UserRepository userRepository,
+            UserService userService,
+            JwtService jwtService
+    ) {
+        this.authenticationManager = authenticationManager;
+        this.userRepository = userRepository;
+        this.userService = userService;
+        this.jwtService = jwtService;
+    }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
-        String normalizedEmail = normalizeCompanyEmail(request.email());
+    public LoginResponse login(@RequestBody LoginRequest request) {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
+            );
+        } catch (BadCredentialsException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "メールアドレスまたはパスワードが違います");
+        }
 
-        Authentication authentication = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(normalizedEmail, request.password())
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "ユーザーが見つかりません"));
+
+        if (!user.isActive()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "このユーザーは無効化されています");
+        }
+
+        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
+
+        UserResponse response = new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole(),
+                user.isActive(),
+                user.isPasswordChangeRequired()
         );
 
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
-
-        HttpSession session = httpRequest.getSession(true);
-        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
-
-        return ResponseEntity.ok(new AuthResponse("logged in", userService.findMe()));
+        return new LoginResponse(token, response);
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
-        SecurityContextHolder.clearContext();
-        return ResponseEntity.ok(Map.of("message", "logged out"));
+    public void logout() {
     }
 
-    private String normalizeCompanyEmail(String raw) {
-        if (raw == null) {
-            throw new IllegalArgumentException("ログインIDを入力してください");
-        }
-
-        String value = raw.trim().toLowerCase();
-
-        if (value.isEmpty()) {
-            throw new IllegalArgumentException("ログインIDを入力してください");
-        }
-
-        if (!value.contains("@")) {
-            return value + COMPANY_DOMAIN;
-        }
-
-        if (!value.endsWith(COMPANY_DOMAIN)) {
-            throw new IllegalArgumentException("vital-area.com のメールアドレスのみ利用できます");
-        }
-
-        String localPart = value.substring(0, value.indexOf('@')).trim();
-        if (localPart.isEmpty()) {
-            throw new IllegalArgumentException("ログインIDを入力してください");
-        }
-
-        return value;
+    @GetMapping("/me")
+    public UserResponse me() {
+        return userService.findMe();
     }
 }
