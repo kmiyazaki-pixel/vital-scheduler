@@ -3,7 +3,9 @@ package com.vitalarea.scheduler.service;
 import com.vitalarea.scheduler.dto.CreateUserRequest;
 import com.vitalarea.scheduler.dto.UpdateUserRequest;
 import com.vitalarea.scheduler.dto.UserResponse;
+import com.vitalarea.scheduler.entity.Calendar;
 import com.vitalarea.scheduler.entity.User;
+import com.vitalarea.scheduler.repository.CalendarRepository;
 import com.vitalarea.scheduler.repository.UserRepository;
 import com.vitalarea.scheduler.security.AuthenticatedUser;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public class UserService {
     private static final String COMPANY_DOMAIN = "@vital-area.com";
 
     private final UserRepository userRepository;
+    private final CalendarRepository calendarRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
 
@@ -54,6 +57,13 @@ public class UserService {
         user.setPasswordChangeRequired(true);
 
         User saved = userRepository.save(user);
+
+        Calendar calendar = new Calendar();
+        calendar.setName(saved.getName());
+        calendar.setOwnerUserId(saved.getId());
+        calendar.setType("personal");
+        calendar.setActive(true);
+        calendarRepository.save(calendar);
 
         auditLogService.log(
                 "USER_CREATED",
