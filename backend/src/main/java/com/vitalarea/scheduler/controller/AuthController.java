@@ -1,16 +1,16 @@
 package com.vitalarea.scheduler.controller;
 
 import com.vitalarea.scheduler.dto.LoginRequest;
-import com.vitalarea.scheduler.dto.LoginResponse;
 import com.vitalarea.scheduler.dto.UserResponse;
 import com.vitalarea.scheduler.entity.User;
 import com.vitalarea.scheduler.repository.UserRepository;
-import com.vitalarea.scheduler.security.JwtService;
 import com.vitalarea.scheduler.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,26 +25,25 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final UserService userService;
-    private final JwtService jwtService;
 
     public AuthController(
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
-            UserService userService,
-            JwtService jwtService
+            UserService userService
     ) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.userService = userService;
-        this.jwtService = jwtService;
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
+    public UserResponse login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         try {
-            authenticationManager.authenticate(
+            var authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.email(), request.password())
             );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            httpRequest.getSession(true);
         } catch (BadCredentialsException e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "メールアドレスまたはパスワードが違います");
         }
@@ -56,9 +55,7 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "このユーザーは無効化されています");
         }
 
-        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
-
-        UserResponse response = new UserResponse(
+        return new UserResponse(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
@@ -66,12 +63,15 @@ public class AuthController {
                 user.isActive(),
                 user.isPasswordChangeRequired()
         );
-
-        return new LoginResponse(token, response);
     }
 
     @PostMapping("/logout")
-    public void logout() {
+    public void logout(HttpServletRequest request) {
+        var session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
     }
 
     @GetMapping("/me")
