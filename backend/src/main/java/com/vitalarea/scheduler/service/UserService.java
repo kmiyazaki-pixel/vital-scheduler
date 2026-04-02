@@ -60,8 +60,8 @@ public class UserService {
 
         Calendar calendar = new Calendar();
         calendar.setName(saved.getName());
-        calendar.setOwnerUserId(saved.getId());
         calendar.setType("personal");
+        calendar.setOwnerUserId(saved.getId());
         calendar.setActive(true);
         calendarRepository.save(calendar);
 
