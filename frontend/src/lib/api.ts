@@ -1,4 +1,4 @@
-import { CalendarSummary, EventItem, UserSummary } from '@/lib/types';
+import { AuditLogItem, CalendarSummary, EventItem, UserSummary } from '@/lib/types';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api';
@@ -162,4 +162,8 @@ export async function deleteEvent(eventId: number) {
   return request<void>(`/events/${eventId}`, {
     method: 'DELETE'
   });
+}
+
+export async function fetchAuditLogs() {
+  return request<AuditLogItem[]>('/audit-logs');
 }
