@@ -1,6 +1,7 @@
 package com.vitalarea.scheduler.config;
 
 import com.vitalarea.scheduler.security.DatabaseUserDetailsService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -14,12 +15,21 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     private final DatabaseUserDetailsService userDetailsService;
+
+    @Value("${app.cors.allowed-origins:http://localhost:3000}")
+    private String allowedOrigins;
 
     public SecurityConfig(DatabaseUserDetailsService userDetailsService) {
         this.userDetailsService = userDetailsService;
@@ -35,13 +45,36 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/logout").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .logout(logout -> logout.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable());
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+
+        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(List.of("Set-Cookie"));
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean
