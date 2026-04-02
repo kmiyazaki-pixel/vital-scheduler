@@ -45,14 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             User user = userRepository.findById(userId).orElse(null);
             if (user != null && user.isActive()) {
-                AuthenticatedUser principal = new AuthenticatedUser(
-                        user.getId(),
-                        user.getEmail(),
-                        user.getPasswordHash(),
-                        user.getRole(),
-                        user.isActive(),
-                        user.isPasswordChangeRequired()
-                );
+                AuthenticatedUser principal = new AuthenticatedUser(user);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
