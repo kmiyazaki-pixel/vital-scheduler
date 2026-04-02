@@ -20,9 +20,10 @@ server:
   servlet:
     session:
       cookie:
+        name: VITAL_SCHEDULER_SESSION
         same-site: none
-        http-only: true
         secure: true
+        http-only: true
 
 app:
   cors:
