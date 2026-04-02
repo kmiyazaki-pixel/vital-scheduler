@@ -1,6 +1,6 @@
 'use client';
 
-import { login, setToken } from '@/lib/api';
+import { login } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -50,9 +50,7 @@ export default function LoginPage() {
       const email = `${normalizedLoginId}${COMPANY_DOMAIN}`;
       const result = await login({ email, password });
 
-      setToken(result.token);
-
-      if (result.user.passwordChangeRequired) {
+      if (result.passwordChangeRequired) {
         router.replace('/settings?forcePasswordChange=1');
         return;
       }
