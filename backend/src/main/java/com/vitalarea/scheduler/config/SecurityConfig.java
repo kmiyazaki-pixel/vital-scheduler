@@ -18,6 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
     private final DatabaseUserDetailsService userDetailsService;
 
     public SecurityConfig(DatabaseUserDetailsService userDetailsService) {
@@ -39,6 +40,7 @@ public class SecurityConfig {
                 .logout(logout -> logout.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable());
+
         return http.build();
     }
 
