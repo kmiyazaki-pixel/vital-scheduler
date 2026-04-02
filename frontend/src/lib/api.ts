@@ -3,31 +3,14 @@ import { CalendarSummary, EventItem, UserSummary } from '@/lib/types';
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api';
 
-export function getToken() {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('auth_token');
-}
-
-export function setToken(token: string) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('auth_token', token);
-}
-
-export function clearToken() {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem('auth_token');
-}
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getToken();
-
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {})
     },
+    credentials: 'include',
     cache: 'no-store'
   });
 
@@ -35,7 +18,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     let message = 'システムエラーが発生しました。管理者に連絡してください';
     try {
       const text = await response.text();
-      if (text) message = text;
+      if (text) {
+        message = text;
+      }
     } catch {
       //
     }
@@ -58,21 +43,17 @@ export type MeResponse = {
   passwordChangeRequired: boolean;
 };
 
-export type LoginResponse = {
-  token: string;
-  user: MeResponse;
-};
-
 export async function login(input: { email: string; password: string }) {
-  return request<LoginResponse>('/auth/login', {
+  return request<MeResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(input)
   });
 }
 
 export async function logout() {
-  clearToken();
-  return null;
+  return request<void>('/auth/logout', {
+    method: 'POST'
+  });
 }
 
 export async function fetchMe() {
