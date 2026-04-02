@@ -1,157 +1,184 @@
-import {
-  AuthResponse,
-  CalendarSummary,
-  EventItem,
-  EventPayload,
-  LoginPayload,
-  UserPayload,
-  UserSummary,
-  AuditLogItem
-} from './types';
+import { CalendarSummary, EventItem, UserSummary } from '@/lib/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api';
 
-type ApiErrorPayload = {
-  message?: string;
-};
+export function getToken() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('auth_token');
+}
+
+export function setToken(token: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('auth_token', token);
+}
+
+export function clearToken() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('auth_token');
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init?.headers ?? {})
-      },
-      credentials: 'include',
-      cache: 'no-store'
-    });
+  const token = getToken();
 
-    if (!res.ok) {
-      let message = `API Error: ${res.status}`;
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {})
+    },
+    cache: 'no-store'
+  });
 
-      try {
-        const payload = (await res.json()) as ApiErrorPayload;
-        if (payload?.message) {
-          message = payload.message;
-        } else {
-          message = defaultMessageByStatus(res.status);
-        }
-      } catch {
-        message = defaultMessageByStatus(res.status);
-      }
-
-      throw new Error(message);
+  if (!response.ok) {
+    let message = 'システムエラーが発生しました。管理者に連絡してください';
+    try {
+      const text = await response.text();
+      if (text) message = text;
+    } catch {
+      //
     }
-
-    if (res.status === 204) {
-      return undefined as T;
-    }
-
-    return res.json() as Promise<T>;
-  } catch (error) {
-    if (error instanceof Error && error.message !== 'Failed to fetch') {
-      throw error;
-    }
-    throw new Error('通信に失敗しました。画面を再読み込みしてください');
+    throw new Error(message);
   }
+
+  if (response.status === 204) {
+    return null as T;
+  }
+
+  return response.json();
 }
 
-function defaultMessageByStatus(status: number) {
-  switch (status) {
-    case 400:
-      return '入力内容を確認してください';
-    case 401:
-      return 'ログインIDまたはパスワードが違います';
-    case 403:
-      return 'この操作を行う権限がありません';
-    case 404:
-      return '対象データが見つかりません';
-    default:
-      return 'システムエラーが発生しました。管理者に連絡してください';
-  }
-}
+export type MeResponse = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  passwordChangeRequired: boolean;
+};
 
-export async function login(payload: LoginPayload): Promise<AuthResponse> {
-  return request<AuthResponse>('/auth/login', {
+export type LoginResponse = {
+  token: string;
+  user: MeResponse;
+};
+
+export async function login(input: { email: string; password: string }) {
+  return request<LoginResponse>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(input)
   });
 }
 
-export async function logout(): Promise<{ message: string }> {
-  return request<{ message: string }>('/auth/logout', {
-    method: 'POST'
+export async function logout() {
+  clearToken();
+  return null;
+}
+
+export async function fetchMe() {
+  return request<MeResponse>('/auth/me');
+}
+
+export async function changeMyPassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}) {
+  return request<void>('/users/me/password', {
+    method: 'PUT',
+    body: JSON.stringify(input)
   });
 }
 
-export async function fetchMe(): Promise<UserSummary> {
-  return request<UserSummary>('/users/me');
-}
-
-export async function fetchUsers(): Promise<UserSummary[]> {
+export async function fetchUsers() {
   return request<UserSummary[]>('/users');
 }
 
-export async function createUser(payload: UserPayload & { password: string }): Promise<UserSummary> {
+export async function createUser(input: {
+  name: string;
+  email: string;
+  password: string;
+  role: 'admin' | 'member';
+}) {
   return request<UserSummary>('/users', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(input)
   });
 }
 
-export async function updateUser(userId: number, payload: UserPayload & { active: boolean }): Promise<UserSummary> {
-  return request<UserSummary>(`/users/${userId}`, {
+export async function updateUser(input: {
+  userId: number;
+  name: string;
+  email: string;
+  role: 'admin' | 'member';
+  active: boolean;
+}) {
+  return request<UserSummary>(`/users/${input.userId}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      name: input.name,
+      email: input.email,
+      role: input.role,
+      active: input.active
+    })
   });
 }
 
-export async function updateUserStatus(userId: number, active: boolean): Promise<UserSummary> {
+export async function updateUserStatus(userId: number, active: boolean) {
   return request<UserSummary>(`/users/${userId}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ active })
   });
 }
 
-export async function changeMyPassword(payload: {
-  currentPassword: string;
-  newPassword: string;
-}): Promise<{ message: string }> {
-  return request<{ message: string }>('/users/me/password', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-
-export async function fetchAuditLogs(): Promise<AuditLogItem[]> {
-  return request<AuditLogItem[]>('/audit-logs');
-}
-
-export async function fetchCalendars(): Promise<CalendarSummary[]> {
+export async function fetchCalendars() {
   return request<CalendarSummary[]>('/calendars');
 }
 
-export async function fetchEvents(calendarId: number, from: string, to: string): Promise<EventItem[]> {
-  return request<EventItem[]>(`/calendars/${calendarId}/events?from=${from}&to=${to}`);
+export async function fetchEvents(
+  calendarId: number,
+  from: string,
+  to: string
+) {
+  return request<EventItem[]>(
+    `/calendars/${calendarId}/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+  );
 }
 
-export async function createEvent(payload: EventPayload): Promise<EventItem> {
+export async function createEvent(input: {
+  calendarId: number;
+  title: string;
+  category: string;
+  memo: string;
+  startAt: string;
+  endAt: string;
+  allDay: boolean;
+}) {
   return request<EventItem>('/events', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(input)
   });
 }
 
-export async function updateEvent(eventId: number, payload: EventPayload): Promise<EventItem> {
+export async function updateEvent(
+  eventId: number,
+  input: {
+    calendarId: number;
+    title: string;
+    category: string;
+    memo: string;
+    startAt: string;
+    endAt: string;
+    allDay: boolean;
+  }
+) {
   return request<EventItem>(`/events/${eventId}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(input)
   });
 }
 
-export async function deleteEvent(eventId: number): Promise<{ message: string }> {
-  return request<{ message: string }>(`/events/${eventId}`, {
+export async function deleteEvent(eventId: number) {
+  return request<void>(`/events/${eventId}`, {
     method: 'DELETE'
   });
 }
