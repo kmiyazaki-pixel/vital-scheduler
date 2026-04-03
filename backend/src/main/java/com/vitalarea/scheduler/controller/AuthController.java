@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -15,17 +16,23 @@ import java.util.Map;
 public class AuthController {
 
     @GetMapping("/me")
-    public ResponseEntity<?> me(Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> me(Authentication authentication) {
+        Map<String, Object> body = new LinkedHashMap<>();
+
         if (authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("authenticated", false));
+            body.put("authenticated", false);
+            body.put("username", null);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
         }
 
-        return ResponseEntity.ok(Map.of(
-                "authenticated", true,
-                "username", authentication.getName()
-        ));
+        body.put("authenticated", true);
+        body.put("username", authentication.getName());
+        body.put("authorities", authentication.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .toList());
+
+        return ResponseEntity.ok(body);
     }
 }
