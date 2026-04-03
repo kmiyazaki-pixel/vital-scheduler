@@ -47,25 +47,6 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/",
-                                "/login",
-                                "/login/",
-                                "/settings",
-                                "/settings/",
-                                "/calendar",
-                                "/calendar/",
-                                "/calendar/month",
-                                "/calendar/month/",
-                                "/calendar/week",
-                                "/calendar/week/",
-                                "/admin",
-                                "/admin/",
-                                "/admin/users",
-                                "/admin/users/",
-                                "/admin/audit-logs",
-                                "/admin/audit-logs/"
-                        ).permitAll()
-
-                        .requestMatchers(
                                 "/index.html",
                                 "/error",
                                 "/favicon.ico",
@@ -73,6 +54,17 @@ public class SecurityConfig {
                                 "/robots.txt",
                                 "/sitemap.xml",
                                 "/404.html",
+                                "/login",
+                                "/settings",
+                                "/calendar",
+                                "/calendar/month",
+                                "/calendar/week",
+                                "/admin",
+                                "/admin/users",
+                                "/admin/audit-logs"
+                        ).permitAll()
+
+                        .requestMatchers(
                                 "/_next/**",
                                 "/static/**",
                                 "/assets/**",
@@ -90,7 +82,12 @@ public class SecurityConfig {
                                 "/**/*.json"
                         ).permitAll()
 
-                        .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/logout",
+                                "/api/auth/me"
+                        ).permitAll()
+
                         .requestMatchers("/api/**").authenticated()
 
                         .anyRequest().permitAll()
