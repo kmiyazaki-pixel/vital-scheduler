@@ -6,9 +6,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class SpaForwardController {
 
-    @GetMapping(value = {
-            "/{path:^(?!api$)(?!_next$)[^.]*}",
-            "/{path:^(?!api$)(?!_next$).*$}/**/{subpath:[^.]*}"
+    @GetMapping({
+            "/login",
+            "/settings",
+            "/calendar",
+            "/calendar/month",
+            "/calendar/week",
+            "/admin",
+            "/admin/users",
+            "/admin/audit-logs"
     })
     public String forward() {
         return "forward:/index.html";
