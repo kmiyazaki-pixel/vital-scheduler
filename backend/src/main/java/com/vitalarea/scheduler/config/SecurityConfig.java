@@ -44,10 +44,26 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // public auth endpoints
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/logout").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/error").permitAll()
+
+                        // public pages / static files
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/login",
+                                "/error",
+                                "/favicon.ico",
+                                "/manifest.json",
+                                "/robots.txt",
+                                "/sitemap.xml",
+                                "/_next/**",
+                                "/static/**",
+                                "/assets/**"
+                        ).permitAll()
+
                         .anyRequest().authenticated())
                 .logout(logout -> logout.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
