@@ -45,25 +45,34 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // public auth endpoints
-                        .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/api/auth/logout").permitAll()
-                        .requestMatchers("/api/auth/me").permitAll()
-
-                        // public top/static files
                         .requestMatchers(
                                 "/",
+                                "/login",
+                                "/login/",
+                                "/settings",
+                                "/settings/",
+                                "/calendar",
+                                "/calendar/",
+                                "/calendar/month",
+                                "/calendar/month/",
+                                "/calendar/week",
+                                "/calendar/week/",
+                                "/admin",
+                                "/admin/",
+                                "/admin/users",
+                                "/admin/users/",
+                                "/admin/audit-logs",
+                                "/admin/audit-logs/"
+                        ).permitAll()
+
+                        .requestMatchers(
                                 "/index.html",
                                 "/error",
                                 "/favicon.ico",
                                 "/manifest.json",
                                 "/robots.txt",
                                 "/sitemap.xml",
-                                "/404.html"
-                        ).permitAll()
-
-                        // Next/static assets
-                        .requestMatchers(
+                                "/404.html",
                                 "/_next/**",
                                 "/static/**",
                                 "/assets/**",
@@ -81,18 +90,7 @@ public class SecurityConfig {
                                 "/**/*.json"
                         ).permitAll()
 
-                        // SPA pages
-                        .requestMatchers(
-                                "/login",
-                                "/settings",
-                                "/settings/**",
-                                "/calendar",
-                                "/calendar/**",
-                                "/admin",
-                                "/admin/**"
-                        ).permitAll()
-
-                        // secured API
+                        .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
                         .requestMatchers("/api/**").authenticated()
 
                         .anyRequest().permitAll()
