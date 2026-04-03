@@ -49,11 +49,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/logout").permitAll()
 
-                        // public pages / static files
+                        // public static files
                         .requestMatchers(
                                 "/",
                                 "/index.html",
-                                "/login",
                                 "/error",
                                 "/favicon.ico",
                                 "/manifest.json",
@@ -61,10 +60,37 @@ public class SecurityConfig {
                                 "/sitemap.xml",
                                 "/_next/**",
                                 "/static/**",
-                                "/assets/**"
+                                "/assets/**",
+                                "/**/*.js",
+                                "/**/*.css",
+                                "/**/*.png",
+                                "/**/*.jpg",
+                                "/**/*.jpeg",
+                                "/**/*.svg",
+                                "/**/*.webp",
+                                "/**/*.ico",
+                                "/**/*.txt",
+                                "/**/*.map",
+                                "/**/*.json"
                         ).permitAll()
 
-                        .anyRequest().authenticated())
+                        // public SPA routes
+                        .requestMatchers(
+                                "/login",
+                                "/settings",
+                                "/settings/**",
+                                "/calendar",
+                                "/calendar/**",
+                                "/admin",
+                                "/admin/**"
+                        ).permitAll()
+
+                        // secured API
+                        .requestMatchers("/api/**").authenticated()
+
+                        // everything else
+                        .anyRequest().permitAll()
+                )
                 .logout(logout -> logout.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable());
