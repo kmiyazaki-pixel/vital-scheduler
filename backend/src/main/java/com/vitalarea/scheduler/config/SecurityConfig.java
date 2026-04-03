@@ -43,55 +43,54 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        .requestMatchers(
-                                "/",
-                                "/index.html",
-                                "/error",
-                                "/favicon.ico",
-                                "/manifest.json",
-                                "/robots.txt",
-                                "/sitemap.xml",
-                                "/404.html",
-                                "/login",
-                                "/settings",
-                                "/calendar",
-                                "/calendar/month",
-                                "/calendar/week",
-                                "/admin",
-                                "/admin/users",
-                                "/admin/audit-logs"
-                        ).permitAll()
+        .requestMatchers(
+                "/",
+                "/index.html",
+                "/error",
+                "/favicon.ico",
+                "/manifest.json",
+                "/robots.txt",
+                "/sitemap.xml",
+                "/404.html",
+                "/login",
+                "/settings",
+                "/settings/**",
+                "/calendar",
+                "/calendar/**",
+                "/admin",
+                "/admin/**"
+        ).permitAll()
 
-                        .requestMatchers(
-                                "/_next/**",
-                                "/static/**",
-                                "/assets/**",
-                                "/images/**",
-                                "/**/*.js",
-                                "/**/*.css",
-                                "/**/*.png",
-                                "/**/*.jpg",
-                                "/**/*.jpeg",
-                                "/**/*.svg",
-                                "/**/*.webp",
-                                "/**/*.ico",
-                                "/**/*.txt",
-                                "/**/*.map",
-                                "/**/*.json"
-                        ).permitAll()
+        .requestMatchers(
+                "/_next/**",
+                "/static/**",
+                "/assets/**",
+                "/images/**",
+                "/**/*.js",
+                "/**/*.css",
+                "/**/*.png",
+                "/**/*.jpg",
+                "/**/*.jpeg",
+                "/**/*.svg",
+                "/**/*.webp",
+                "/**/*.ico",
+                "/**/*.txt",
+                "/**/*.map",
+                "/**/*.json"
+        ).permitAll()
 
-                        .requestMatchers(
-                                "/api/auth/login",
-                                "/api/auth/logout",
-                                "/api/auth/me"
-                        ).permitAll()
+        .requestMatchers(
+                "/api/auth/login",
+                "/api/auth/logout",
+                "/api/auth/me"
+        ).permitAll()
 
-                        .requestMatchers("/api/**").authenticated()
+        .requestMatchers("/api/**").authenticated()
 
-                        .anyRequest().permitAll()
-                )
+        .anyRequest().permitAll()
+)
                 .logout(logout -> logout.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable());
