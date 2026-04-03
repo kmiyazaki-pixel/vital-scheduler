@@ -48,8 +48,9 @@ public class SecurityConfig {
                         // public auth endpoints
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/logout").permitAll()
+                        .requestMatchers("/api/auth/me").permitAll()
 
-                        // public static files
+                        // public top/static files
                         .requestMatchers(
                                 "/",
                                 "/index.html",
@@ -58,9 +59,15 @@ public class SecurityConfig {
                                 "/manifest.json",
                                 "/robots.txt",
                                 "/sitemap.xml",
+                                "/404.html"
+                        ).permitAll()
+
+                        // Next/static assets
+                        .requestMatchers(
                                 "/_next/**",
                                 "/static/**",
                                 "/assets/**",
+                                "/images/**",
                                 "/**/*.js",
                                 "/**/*.css",
                                 "/**/*.png",
@@ -74,7 +81,7 @@ public class SecurityConfig {
                                 "/**/*.json"
                         ).permitAll()
 
-                        // public SPA routes
+                        // SPA pages
                         .requestMatchers(
                                 "/login",
                                 "/settings",
@@ -88,7 +95,6 @@ public class SecurityConfig {
                         // secured API
                         .requestMatchers("/api/**").authenticated()
 
-                        // everything else
                         .anyRequest().permitAll()
                 )
                 .logout(logout -> logout.disable())
