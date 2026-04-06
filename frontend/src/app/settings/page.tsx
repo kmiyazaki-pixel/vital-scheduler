@@ -1,6 +1,6 @@
 'use client';
 
-import { SchedulerShell } from '@/components/SchedulerShell';
+import  SchedulerShell  from '@/components/SchedulerShell';
 import { changeMyPassword } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
