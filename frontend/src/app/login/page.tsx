@@ -7,7 +7,6 @@ const COMPANY_DOMAIN = '@vital-area.com';
 
 export default function LoginPage() {
   const [nextPath, setNextPath] = useState('/calendar/month');
-
   const [loginId, setLoginId] = useState('yamada');
   const [password, setPassword] = useState('password');
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +52,7 @@ export default function LoginPage() {
         return;
       }
 
-      window.location.replace(nextPath);
+      window.location.replace(nextPath || '/calendar/month');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ログインに失敗しました');
     } finally {
