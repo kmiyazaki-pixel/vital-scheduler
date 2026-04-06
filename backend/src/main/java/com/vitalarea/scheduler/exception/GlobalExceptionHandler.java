@@ -13,11 +13,11 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(Exception ex, HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> handleException(Exception ex, HttpServletRequest request) throws Exception {
         String uri = request.getRequestURI();
 
         if (uri != null && !uri.startsWith("/api/")) {
-            throw new RuntimeException(ex);
+            throw ex;
         }
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
