@@ -1,34 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const run = async () => {
-      try {
-        const res = await fetch('/api/auth/me', {
-          credentials: 'include',
-          cache: 'no-store',
-        });
-
-        // 未ログインならログインへ
-        if (!res.ok) {
-          window.location.href = '/login';
-          return;
-        }
-
-        // ログイン済みならカレンダーへ
-        window.location.href = '/calendar/month';
-      } catch {
-        window.location.href = '/login';
-      }
-    };
-
-    run();
-  }, []);
-
-  return <div>カレンダーへ移動しています...</div>;
+  return (
+    <main style={{ padding: '24px', fontFamily: 'sans-serif' }}>
+      <p>トップページです。</p>
+      <p style={{ marginTop: '12px' }}>
+        <Link href="/login">ログイン画面へ</Link>
+      </p>
+    </main>
+  );
 }
