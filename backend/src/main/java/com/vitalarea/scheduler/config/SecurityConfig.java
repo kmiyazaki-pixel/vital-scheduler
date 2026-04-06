@@ -68,17 +68,7 @@ public class SecurityConfig {
                 "/static/**",
                 "/assets/**",
                 "/images/**",
-                "/**/*.js",
-                "/**/*.css",
-                "/**/*.png",
-                "/**/*.jpg",
-                "/**/*.jpeg",
-                "/**/*.svg",
-                "/**/*.webp",
-                "/**/*.ico",
-                "/**/*.txt",
-                "/**/*.map",
-                "/**/*.json"
+               
         ).permitAll()
 
         .requestMatchers(
