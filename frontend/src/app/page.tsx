@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
@@ -9,9 +10,10 @@ export default function HomePage() {
   useEffect(() => {
     let cancelled = false;
 
-    const run = async () => {
+    const go = async () => {
       try {
         const res = await fetch('/api/auth/me', {
+          method: 'GET',
           credentials: 'include',
           cache: 'no-store',
         });
@@ -20,9 +22,10 @@ export default function HomePage() {
 
         if (res.ok) {
           router.replace('/calendar/month');
-        } else {
-          router.replace('/login');
+          return;
         }
+
+        router.replace('/login');
       } catch {
         if (!cancelled) {
           router.replace('/login');
@@ -30,12 +33,19 @@ export default function HomePage() {
       }
     };
 
-    run();
+    go();
 
     return () => {
       cancelled = true;
     };
   }, [router]);
 
-  return <div>カレンダーへ移動しています...</div>;
+  return (
+    <main style={{ padding: '24px', fontFamily: 'sans-serif' }}>
+      <p>カレンダーへ移動しています...</p>
+      <p style={{ marginTop: '12px' }}>
+        開かない場合は <Link href="/login">こちら</Link>
+      </p>
+    </main>
+  );
 }
