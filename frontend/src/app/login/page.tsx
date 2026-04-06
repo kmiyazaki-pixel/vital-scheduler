@@ -1,13 +1,11 @@
 'use client';
 
 import { login } from '@/lib/api';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const COMPANY_DOMAIN = '@vital-area.com';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [nextPath, setNextPath] = useState('/calendar/month');
 
   const [loginId, setLoginId] = useState('yamada');
@@ -51,11 +49,11 @@ export default function LoginPage() {
       const result = await login({ email, password });
 
       if (result.passwordChangeRequired) {
-        router.replace('/settings?forcePasswordChange=1');
+        window.location.replace('/settings?forcePasswordChange=1');
         return;
       }
 
-      router.replace(nextPath);
+      window.location.replace(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ログインに失敗しました');
     } finally {
