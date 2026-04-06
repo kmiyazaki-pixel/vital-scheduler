@@ -26,10 +26,5 @@ export default function HomePage() {
     run();
   }, []);
 
-  return (
-    <main style={{ padding: '24px', fontFamily: 'sans-serif' }}>
-      <p>カレンダーへ移動しています...</p>
-      <p style={{ marginTop: '12px' }}>開かない場合は /login を開いてください。</p>
-    </main>
-  );
+  return <div>カレンダーへ移動しています...</div>;
 }
