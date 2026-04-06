@@ -43,44 +43,43 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
-        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-        .requestMatchers(
-                "/",
-                "/index.html",
-                "/error",
-                "/favicon.ico",
-                "/manifest.json",
-                "/robots.txt",
-                "/sitemap.xml",
-                "/404.html",
-                "/login",
-                "/settings",
-                "/settings/**",
-                "/calendar",
-                "/calendar/**",
-                "/admin",
-                "/admin/**"
-        ).permitAll()
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/error",
+                                "/favicon.ico",
+                                "/manifest.json",
+                                "/robots.txt",
+                                "/sitemap.xml",
+                                "/404.html",
+                                "/login",
+                                "/settings",
+                                "/settings/**",
+                                "/calendar",
+                                "/calendar/**",
+                                "/admin",
+                                "/admin/**"
+                        ).permitAll()
 
-        .requestMatchers(
-                "/_next/**",
-                "/static/**",
-                "/assets/**",
-                "/images/**",
-               
-        ).permitAll()
+                        .requestMatchers(
+                                "/_next/**",
+                                "/static/**",
+                                "/assets/**",
+                                "/images/**"
+                        ).permitAll()
 
-        .requestMatchers(
-                "/api/auth/login",
-                "/api/auth/logout",
-                "/api/auth/me"
-        ).permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/logout",
+                                "/api/auth/me"
+                        ).permitAll()
 
-        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/api/**").authenticated()
 
-        .anyRequest().permitAll()
-)
+                        .anyRequest().permitAll()
+                )
                 .logout(logout -> logout.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable());
