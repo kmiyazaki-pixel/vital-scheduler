@@ -1,6 +1,6 @@
 'use client';
 
-import { SchedulerShell } from '@/components/SchedulerShell';
+import  SchedulerShell  from '@/components/SchedulerShell';
 import { fetchAuditLogs } from '@/lib/api';
 import { AuditLogItem } from '@/lib/types';
 import { useEffect, useState } from 'react';
