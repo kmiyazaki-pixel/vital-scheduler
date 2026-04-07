@@ -1,0 +1,24 @@
+services:
+  - type: static_site
+    name: vital-scheduler-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishDir: out
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://vital-scheduler-backend.onrender.com/api
+
+  - type: web
+    name: vital-scheduler-backend
+    rootDir: backend
+    buildCommand: mvn -DskipTests package
+    startCommand: java -jar target/*.jar
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: APP_CORS_ALLOWED_ORIGINS
+        value: https://vital-scheduler-frontend.onrender.com
