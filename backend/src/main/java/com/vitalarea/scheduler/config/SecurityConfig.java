@@ -44,40 +44,12 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        .requestMatchers(
-                                "/",
-                                "/index.html",
-                                "/error",
-                                "/favicon.ico",
-                                "/manifest.json",
-                                "/robots.txt",
-                                "/sitemap.xml",
-                                "/404.html",
-                                "/login",
-                                "/settings",
-                                "/settings/**",
-                                "/calendar",
-                                "/calendar/**",
-                                "/admin",
-                                "/admin/**"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                "/_next/**",
-                                "/static/**",
-                                "/assets/**",
-                                "/images/**"
-                        ).permitAll()
-
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/logout",
                                 "/api/auth/me"
                         ).permitAll()
-
                         .requestMatchers("/api/**").authenticated()
-
                         .anyRequest().permitAll()
                 )
                 .logout(logout -> logout.disable())
