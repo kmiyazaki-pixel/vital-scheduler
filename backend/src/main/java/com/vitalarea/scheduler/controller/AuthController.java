@@ -57,8 +57,7 @@ public class AuthController {
     public ResponseEntity<?> me(Authentication authentication) {
         if (authentication == null
                 || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken
-                || !(authentication.getPrincipal() instanceof com.vitalarea.scheduler.security.AuthenticatedUser)) {
+                || authentication instanceof AnonymousAuthenticationToken) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("UNAUTHORIZED");
         }
 
