@@ -15,27 +15,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let message = 'システムエラーが発生しました。管理者に連絡してください';
-
     try {
       const contentType = response.headers.get('content-type') ?? '';
-
       if (contentType.includes('application/json')) {
         const data = await response.json();
         if (typeof data?.message === 'string' && data.message.trim()) {
           message = data.message;
-        } else {
-          message = JSON.stringify(data);
         }
       } else {
         const text = await response.text();
-        if (text?.trim()) {
+        if (text) {
           message = text;
         }
       }
     } catch {
       //
     }
-
     throw new Error(message);
   }
 
@@ -127,11 +122,7 @@ export async function fetchCalendars() {
   return request<CalendarSummary[]>('/calendars');
 }
 
-export async function fetchEvents(
-  calendarId: number,
-  from: string,
-  to: string
-) {
+export async function fetchEvents(calendarId: number, from: string, to: string) {
   return request<EventItem[]>(
     `/calendars/${calendarId}/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
   );
