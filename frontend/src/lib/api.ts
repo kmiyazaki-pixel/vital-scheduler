@@ -1,6 +1,6 @@
 import { AuditLogItem, CalendarSummary, EventItem, UserSummary } from '@/lib/types';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -15,22 +15,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let message = 'システムエラーが発生しました。管理者に連絡してください';
+
     try {
       const contentType = response.headers.get('content-type') ?? '';
+
       if (contentType.includes('application/json')) {
         const data = await response.json();
         if (typeof data?.message === 'string' && data.message.trim()) {
           message = data.message;
+        } else {
+          message = JSON.stringify(data);
         }
       } else {
         const text = await response.text();
-        if (text) {
+        if (text?.trim()) {
           message = text;
         }
       }
     } catch {
       //
     }
+
     throw new Error(message);
   }
 
