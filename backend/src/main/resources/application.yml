@@ -3,14 +3,14 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/vital_scheduler}
     username: ${DATABASE_USERNAME:postgres}
     password: ${DATABASE_PASSWORD:postgres}
+
   jpa:
     hibernate:
       ddl-auto: validate
     open-in-view: false
-spring:
+
   flyway:
     enabled: false
-    locations: classpath:db/migration
 
 server:
   port: ${PORT:8080}
