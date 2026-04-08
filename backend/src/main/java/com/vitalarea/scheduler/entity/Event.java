@@ -52,4 +52,56 @@ public class Event {
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    public Long getId() {
+        return id;
+    }
+
+    public Calendar getCalendar() {
+        return calendar;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public String getMemo() {
+        return memo;
+    }
+
+    public OffsetDateTime getStartAt() {
+        return startAt;
+    }
+
+    public OffsetDateTime getEndAt() {
+        return endAt;
+    }
+
+    public boolean isAllDay() {
+        return allDay;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public Long getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public OffsetDateTime getDeletedAt() {
+        return deletedAt;
+    }
 }
