@@ -7,8 +7,9 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+spring:
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
 
 server:
