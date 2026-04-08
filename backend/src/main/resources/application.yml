@@ -14,6 +14,12 @@ spring:
 
 server:
   port: ${PORT:8080}
+  servlet:
+    session:
+      cookie:
+        same-site: none
+        secure: true
+        http-only: true
 
 app:
   cors:
