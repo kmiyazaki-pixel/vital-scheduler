@@ -39,9 +39,13 @@ export default function CalendarMonthPage() {
 
         if (data.length > 0) {
           setSelectedCalendarId(data[0].id);
+        } else {
+          setSelectedCalendarId(null);
+          setLoading(false);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'カレンダー取得に失敗しました');
+        setLoading(false);
       }
     };
 
@@ -50,7 +54,11 @@ export default function CalendarMonthPage() {
 
   useEffect(() => {
     const loadEvents = async () => {
-      if (!selectedCalendarId) return;
+      if (!selectedCalendarId) {
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
@@ -115,7 +123,7 @@ export default function CalendarMonthPage() {
 
         {!loading && (
           <div style={grid}>
-            {['日','月','火','水','木','金','土'].map((d) => (
+            {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
               <div key={d} style={dayHeader}>{d}</div>
             ))}
 
@@ -145,42 +153,93 @@ export default function CalendarMonthPage() {
   );
 }
 
-const wrap = { display: 'grid', gap: 16 };
-const toolbar = { display: 'flex', justifyContent: 'space-between' };
-const title = { margin: 0 };
-const button = { padding: 8 };
-const topBar = { display: 'flex', justifyContent: 'flex-end' };
-const select = { padding: 8 };
-const errorBox = { color: 'red' };
-
-const grid = {
+const wrap: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(7,1fr)',
-  gap: 6
+  gap: 16,
 };
 
-const dayHeader = {
+const toolbar: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 12,
+};
+
+const title: React.CSSProperties = {
+  margin: 0,
+  fontSize: 20,
+};
+
+const button: React.CSSProperties = {
+  border: '1px solid rgba(0,0,0,0.12)',
+  borderRadius: 10,
+  background: '#fff',
+  padding: '8px 12px',
+  cursor: 'pointer',
+};
+
+const topBar: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+};
+
+const select: React.CSSProperties = {
+  padding: '10px 12px',
+  borderRadius: 10,
+  border: '1px solid rgba(0,0,0,0.12)',
+  background: '#fff',
+  minWidth: 220,
+};
+
+const errorBox: React.CSSProperties = {
+  color: '#b42318',
+  fontSize: 13,
+  lineHeight: 1.5,
+  background: '#FEF3F2',
+  border: '1px solid rgba(180,35,24,0.15)',
+  borderRadius: 10,
+  padding: '10px 12px',
+};
+
+const grid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(7, 1fr)',
+  gap: 6,
+};
+
+const dayHeader: React.CSSProperties = {
   textAlign: 'center',
-  fontWeight: 'bold'
+  fontWeight: 700,
+  padding: 10,
+  background: '#F5F3EE',
+  borderRadius: 10,
 };
 
-const cell = {
+const cell: React.CSSProperties = {
   minHeight: 110,
   border: '1px solid #ddd',
-  padding: 6
+  padding: 6,
+  background: '#fff',
+  borderRadius: 12,
 };
 
-const dateStyle = {
-  fontWeight: 'bold'
+const dateStyle: React.CSSProperties = {
+  fontWeight: 700,
+  fontSize: 14,
 };
 
-const eventList = {
-  fontSize: 12
+const eventList: React.CSSProperties = {
+  fontSize: 12,
+  display: 'grid',
+  gap: 4,
+  marginTop: 6,
 };
 
-const eventItem = {
+const eventItem: React.CSSProperties = {
   background: '#eee',
-  marginTop: 2,
-  padding: 2,
-  borderRadius: 4
+  padding: '2px 6px',
+  borderRadius: 4,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
