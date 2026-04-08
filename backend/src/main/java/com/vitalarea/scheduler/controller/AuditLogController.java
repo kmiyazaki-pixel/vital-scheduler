@@ -1,77 +1,20 @@
 package com.vitalarea.scheduler.controller;
 
-import com.vitalarea.scheduler.dto.LoginRequest;
-import com.vitalarea.scheduler.dto.UserResponse;
-import com.vitalarea.scheduler.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
+import com.vitalarea.scheduler.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/audit-logs")
 @RequiredArgsConstructor
-public class AuthController {
+public class AuditLogController {
 
-    private final AuthenticationManager authenticationManager;
-    private final UserService userService;
+    private final AuditLogService auditLogService;
 
-    @PostMapping("/login")
-    public UserResponse login(
-            @Valid @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest
-    ) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
-        );
-
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
-
-        HttpSession session = httpRequest.getSession(true);
-        session.setAttribute(
-                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                context
-        );
-
-        return userService.findMe();
-    }
-
-    @GetMapping("/me")
-    public ResponseEntity<?> me(Authentication authentication) {
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("UNAUTHORIZED");
-        }
-
-        return ResponseEntity.ok(userService.findMe());
-    }
-
-    @PostMapping("/logout")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(HttpServletRequest request) {
-        SecurityContextHolder.clearContext();
-
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
+    @GetMapping
+    public Object list() {
+        return auditLogService.findAll();
     }
 }
