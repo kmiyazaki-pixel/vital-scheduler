@@ -41,6 +41,7 @@ export default function CalendarMonthPage() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const monthLabel = `${year}年${month + 1}月`;
+  const todayKey = new Date().toISOString().slice(0, 10);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month, 1);
@@ -254,11 +255,21 @@ export default function CalendarMonthPage() {
               const key = date.toISOString().slice(0, 10);
               const dayEvents = eventsByDate.get(key) ?? [];
               const isCurrent = date.getMonth() === month;
+              const isToday = key === todayKey;
 
               return (
-                <div key={key} style={{ ...cell, opacity: isCurrent ? 1 : 0.4 }}>
+                <div
+                  key={key}
+                  style={{
+                    ...cell,
+                    ...(isToday ? todayCell : {}),
+                    opacity: isCurrent ? 1 : 0.4,
+                  }}
+                >
                   <div style={cellHeader}>
-                    <div style={dateStyle}>{date.getDate()}</div>
+                    <div style={{ ...dateStyle, ...(isToday ? todayDateStyle : {}) }}>
+                      {date.getDate()}
+                    </div>
                     <button style={miniButton} onClick={() => openCreateModal(date)}>＋</button>
                   </div>
 
@@ -407,7 +418,12 @@ function toInputValue(iso: string) {
 function toLocalDateTimeInput(date: Date, hour: number, minute: number) {
   const d = new Date(date);
   d.setHours(hour, minute, 0, 0);
-  return toInputValue(d.toISOString());
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${day}T${hh}:${mm}`;
 }
 
 const wrap: React.CSSProperties = {
@@ -507,6 +523,11 @@ const cell: React.CSSProperties = {
   borderRadius: 12,
 };
 
+const todayCell: React.CSSProperties = {
+  border: '2px solid #1A1916',
+  background: '#FFF7E8',
+};
+
 const cellHeader: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
@@ -516,6 +537,10 @@ const cellHeader: React.CSSProperties = {
 const dateStyle: React.CSSProperties = {
   fontWeight: 700,
   fontSize: 14,
+};
+
+const todayDateStyle: React.CSSProperties = {
+  color: '#b45309',
 };
 
 const miniButton: React.CSSProperties = {
