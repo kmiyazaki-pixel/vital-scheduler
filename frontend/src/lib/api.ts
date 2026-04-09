@@ -7,10 +7,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(init?.headers ?? {})
+      ...(init?.headers ?? {}),
     },
     credentials: 'include',
-    cache: 'no-store'
+    cache: 'no-store',
   });
 
   if (!response.ok) {
@@ -18,7 +18,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
     try {
       const contentType = response.headers.get('content-type') ?? '';
-
       if (contentType.includes('application/json')) {
         const data = await response.json();
         if (typeof data?.message === 'string' && data.message.trim()) {
@@ -56,29 +55,29 @@ export type MeResponse = {
 };
 
 export async function login(input: { email: string; password: string }) {
-  return request<MeResponse>('/auth/login', {
+  return request('/auth/login', {
     method: 'POST',
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export async function logout() {
-  return request<void>('/auth/logout', {
-    method: 'POST'
+  return request('/auth/logout', {
+    method: 'POST',
   });
 }
 
 export async function fetchMe() {
-  return request<MeResponse>('/auth/me');
+  return request('/auth/me');
 }
 
 export async function changeMyPassword(input: {
   currentPassword: string;
   newPassword: string;
 }) {
-  return request<void>('/users/me/password', {
+  return request('/users/me/password', {
     method: 'PUT',
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
@@ -94,7 +93,7 @@ export async function createUser(input: {
 }) {
   return request<UserSummary>('/users', {
     method: 'POST',
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
@@ -111,15 +110,21 @@ export async function updateUser(input: {
       name: input.name,
       email: input.email,
       role: input.role,
-      active: input.active
-    })
+      active: input.active,
+    }),
   });
 }
 
 export async function updateUserStatus(userId: number, active: boolean) {
   return request<UserSummary>(`/users/${userId}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ active })
+    body: JSON.stringify({ active }),
+  });
+}
+
+export async function deleteUser(userId: number) {
+  return request<{ message: string }>(`/users/${userId}`, {
+    method: 'DELETE',
   });
 }
 
@@ -144,7 +149,7 @@ export async function createEvent(input: {
 }) {
   return request<EventItem>('/events', {
     method: 'POST',
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
@@ -162,13 +167,13 @@ export async function updateEvent(
 ) {
   return request<EventItem>(`/events/${eventId}`, {
     method: 'PUT',
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export async function deleteEvent(eventId: number) {
-  return request<void>(`/events/${eventId}`, {
-    method: 'DELETE'
+  return request<null>(`/events/${eventId}`, {
+    method: 'DELETE',
   });
 }
 
