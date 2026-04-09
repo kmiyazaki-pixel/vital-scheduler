@@ -64,8 +64,8 @@ export default function CalendarMonthPage() {
         setLoading(true);
         setError(null);
 
-        const from = new Date(year, month, 1).toISOString();
-        const to = new Date(year, month + 1, 1).toISOString();
+        const from = formatDateParam(new Date(year, month, 1));
+        const to = formatDateParam(new Date(year, month + 1, 1));
 
         const data = await fetchEvents(selectedCalendarId, from, to);
         setEvents(data);
@@ -151,6 +151,13 @@ export default function CalendarMonthPage() {
       </div>
     </SchedulerShell>
   );
+}
+
+function formatDateParam(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 const wrap: React.CSSProperties = {
