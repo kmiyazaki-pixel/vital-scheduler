@@ -53,6 +53,13 @@ public class UserController {
         return userService.updateStatus(userId, active);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{userId}")
+    public Map<String, String> delete(@PathVariable Long userId) {
+        userService.delete(userId);
+        return Map.of("message", "ユーザーを削除しました");
+    }
+
     @PostMapping("/me/password")
     public Map<String, String> changeMyPassword(@RequestBody @Valid ChangePasswordRequest request) {
         userService.changeMyPassword(request.currentPassword(), request.newPassword());
