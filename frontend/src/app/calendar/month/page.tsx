@@ -1,7 +1,13 @@
 'use client';
 
 import SchedulerShell from '@/components/SchedulerShell';
-import { createEvent, deleteEvent, fetchCalendars, fetchEvents, updateEvent } from '@/lib/api';
+import {
+  createEvent,
+  deleteEvent,
+  fetchCalendars,
+  fetchEvents,
+  updateEvent,
+} from '@/lib/api';
 import { CalendarSummary, EventItem } from '@/lib/types';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -34,14 +40,13 @@ export default function CalendarMonthPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EventFormState>(EMPTY_FORM);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const monthLabel = `${year}年${month + 1}月`;
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = formatLocalDateKey(new Date());
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month, 1);
@@ -84,8 +89,8 @@ export default function CalendarMonthPage() {
 
       const from = formatDateParam(new Date(y, m, 1));
       const to = formatDateParam(new Date(y, m + 1, 1));
-
       const data = await fetchEvents(calendarId, from, to);
+
       setEvents(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定取得に失敗しました');
@@ -111,7 +116,7 @@ export default function CalendarMonthPage() {
     const map = new Map<string, EventItem[]>();
 
     for (const e of events) {
-      const key = new Date(e.startAt).toISOString().slice(0, 10);
+      const key = formatLocalDateKey(new Date(e.startAt));
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
@@ -199,7 +204,9 @@ export default function CalendarMonthPage() {
     try {
       setSaving(true);
       setError(null);
+
       await deleteEvent(form.id);
+
       setModalOpen(false);
       setForm(EMPTY_FORM);
 
@@ -214,13 +221,17 @@ export default function CalendarMonthPage() {
   };
 
   return (
-    <SchedulerShell title="月表示">
+    <SchedulerShell>
       <div style={wrap}>
         <div style={toolbar}>
           <div style={toolbarLeft}>
-            <button style={button} onClick={prevMonth}>前月</button>
+            <button style={button} onClick={prevMonth}>
+              前月
+            </button>
             <h2 style={title}>{monthLabel}</h2>
-            <button style={button} onClick={nextMonth}>次月</button>
+            <button style={button} onClick={nextMonth}>
+              次月
+            </button>
           </div>
 
           <div style={toolbarRight}>
@@ -243,16 +254,19 @@ export default function CalendarMonthPage() {
         </div>
 
         {error && <div style={errorBox}>{error}</div>}
+
         {loading && <div>読み込み中...</div>}
 
         {!loading && (
           <div style={grid}>
             {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
-              <div key={d} style={dayHeader}>{d}</div>
+              <div key={d} style={dayHeader}>
+                {d}
+              </div>
             ))}
 
             {calendarDays.map((date) => {
-              const key = date.toISOString().slice(0, 10);
+              const key = formatLocalDateKey(date);
               const dayEvents = eventsByDate.get(key) ?? [];
               const isCurrent = date.getMonth() === month;
               const isToday = key === todayKey;
@@ -263,14 +277,22 @@ export default function CalendarMonthPage() {
                   style={{
                     ...cell,
                     ...(isToday ? todayCell : {}),
-                    opacity: isCurrent ? 1 : 0.4,
+                    opacity: isCurrent ? 1 : 0.45,
                   }}
                 >
                   <div style={cellHeader}>
-                    <div style={{ ...dateStyle, ...(isToday ? todayDateStyle : {}) }}>
+                    <span
+                      style={{
+                        ...dateStyle,
+                        ...(isToday ? todayDateStyle : {}),
+                      }}
+                    >
                       {date.getDate()}
-                    </div>
-                    <button style={miniButton} onClick={() => openCreateModal(date)}>＋</button>
+                    </span>
+
+                    <button style={miniButton} onClick={() => openCreateModal(date)}>
+                      ＋
+                    </button>
                   </div>
 
                   <div style={eventList}>
@@ -292,16 +314,21 @@ export default function CalendarMonthPage() {
         )}
 
         {modalOpen && (
-          <div style={overlay}>
-            <div style={modal}>
+          <div style={overlay} onClick={closeModal}>
+            <div style={modal} onClick={(e) => e.stopPropagation()}>
               <h3 style={modalTitle}>{form.id ? '予定を編集' : '予定を追加'}</h3>
 
               <div style={formGrid}>
                 <label style={label}>
-                  カレンダー
+                  <span>カレンダー</span>
                   <select
                     value={form.calendarId}
-                    onChange={(e) => setForm((prev) => ({ ...prev, calendarId: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        calendarId: Number(e.target.value),
+                      }))
+                    }
                     style={input}
                     disabled={saving}
                   >
@@ -314,47 +341,67 @@ export default function CalendarMonthPage() {
                 </label>
 
                 <label style={label}>
-                  タイトル
+                  <span>タイトル</span>
                   <input
                     value={form.title}
-                    onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
                     style={input}
                     disabled={saving}
                   />
                 </label>
 
                 <label style={label}>
-                  区分
+                  <span>区分</span>
                   <select
                     value={form.category}
-                    onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        category: e.target.value,
+                      }))
+                    }
                     style={input}
                     disabled={saving}
                   >
                     <option value="other">その他</option>
                     <option value="meeting">会議</option>
-                    <option value="holiday">休暇</option>
+                    <option value="vacation">休暇</option>
                     <option value="visit">訪問</option>
                   </select>
                 </label>
 
                 <label style={label}>
-                  開始
+                  <span>開始</span>
                   <input
                     type="datetime-local"
                     value={form.startAt}
-                    onChange={(e) => setForm((prev) => ({ ...prev, startAt: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        startAt: e.target.value,
+                      }))
+                    }
                     style={input}
                     disabled={saving}
                   />
                 </label>
 
                 <label style={label}>
-                  終了
+                  <span>終了</span>
                   <input
                     type="datetime-local"
                     value={form.endAt}
-                    onChange={(e) => setForm((prev) => ({ ...prev, endAt: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        endAt: e.target.value,
+                      }))
+                    }
                     style={input}
                     disabled={saving}
                   />
@@ -364,17 +411,27 @@ export default function CalendarMonthPage() {
                   <input
                     type="checkbox"
                     checked={form.allDay}
-                    onChange={(e) => setForm((prev) => ({ ...prev, allDay: e.target.checked }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        allDay: e.target.checked,
+                      }))
+                    }
                     disabled={saving}
                   />
                   終日
                 </label>
 
                 <label style={label}>
-                  メモ
+                  <span>メモ</span>
                   <textarea
                     value={form.memo}
-                    onChange={(e) => setForm((prev) => ({ ...prev, memo: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        memo: e.target.value,
+                      }))
+                    }
                     style={textarea}
                     disabled={saving}
                   />
@@ -382,10 +439,16 @@ export default function CalendarMonthPage() {
               </div>
 
               <div style={modalActions}>
-                <button style={button} onClick={closeModal} disabled={saving}>キャンセル</button>
+                <button style={button} onClick={closeModal} disabled={saving}>
+                  キャンセル
+                </button>
+
                 {form.id && (
-                  <button style={dangerButton} onClick={handleDelete} disabled={saving}>削除</button>
+                  <button style={dangerButton} onClick={handleDelete} disabled={saving}>
+                    削除
+                  </button>
                 )}
+
                 <button style={primaryButton} onClick={handleSave} disabled={saving}>
                   {saving ? '保存中...' : '保存'}
                 </button>
@@ -405,6 +468,13 @@ function formatDateParam(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
+function formatLocalDateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function toInputValue(iso: string) {
   const date = new Date(iso);
   const y = date.getFullYear();
@@ -418,11 +488,13 @@ function toInputValue(iso: string) {
 function toLocalDateTimeInput(date: Date, hour: number, minute: number) {
   const d = new Date(date);
   d.setHours(hour, minute, 0, 0);
+
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
+
   return `${y}-${m}-${day}T${hh}:${mm}`;
 }
 
