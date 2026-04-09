@@ -42,7 +42,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return null as T;
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 export type MeResponse = {
@@ -54,28 +54,37 @@ export type MeResponse = {
   passwordChangeRequired: boolean;
 };
 
+export type LoginResponse = {
+  id: number;
+  name: string;
+  email: string;
+  role: 'admin' | 'member';
+  active: boolean;
+  passwordChangeRequired: boolean;
+};
+
 export async function login(input: { email: string; password: string }) {
-  return request('/auth/login', {
+  return request<LoginResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
 export async function logout() {
-  return request('/auth/logout', {
+  return request<{ message: string }>('/auth/logout', {
     method: 'POST',
   });
 }
 
 export async function fetchMe() {
-  return request('/auth/me');
+  return request<MeResponse>('/auth/me');
 }
 
 export async function changeMyPassword(input: {
   currentPassword: string;
   newPassword: string;
 }) {
-  return request('/users/me/password', {
+  return request<{ message: string }>('/users/me/password', {
     method: 'PUT',
     body: JSON.stringify(input),
   });
