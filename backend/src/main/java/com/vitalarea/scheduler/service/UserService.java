@@ -20,6 +20,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
     private static final String COMPANY_DOMAIN = "@vital-area.com";
 
     private final UserRepository userRepository;
@@ -37,7 +38,9 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<UserResponse> findAll() {
-        return userRepository.findAll().stream().map(this::toResponse).toList();
+        return userRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -117,6 +120,31 @@ public class UserService {
         );
 
         return toResponse(saved);
+    }
+
+    @Transactional
+    public void delete(Long userId) {
+        AuthenticatedUser principal = currentPrincipal();
+
+        if (principal.getId().equals(userId)) {
+            throw new IllegalArgumentException("自分自身は削除できません");
+        }
+
+        User user = getUser(userId);
+
+        if ("admin".equalsIgnoreCase(user.getRole()) && userRepository.countByRole("admin") <= 1) {
+            throw new IllegalArgumentException("最後の管理者ユーザーは削除できません");
+        }
+
+        calendarRepository.deleteByOwnerUserId(userId);
+        userRepository.delete(user);
+
+        auditLogService.log(
+                "USER_DELETED",
+                "user",
+                userId,
+                "{\"email\":\"" + escapeJson(user.getEmail()) + "\",\"name\":\"" + escapeJson(user.getName()) + "\"}"
+        );
     }
 
     @Transactional
