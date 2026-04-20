@@ -1,28 +1,26 @@
+server:
+  port: ${PORT:8080}
+
 spring:
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/vital_scheduler}
-    username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:postgres}
-
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/scheduler}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
     open-in-view: false
-
   flyway:
-    enabled: false
-
-server:
-  port: ${PORT:8080}
-  servlet:
-    session:
-      cookie:
-        same-site: none
-        secure: true
-        http-only: true
+    enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${https://ujywtifgwarbhsxxikst.supabase.co}
 
 app:
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000}
-  jwt:
-    secret: ${APP_JWT_SECRET:change-me}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,https://tunag.vercel.app}
