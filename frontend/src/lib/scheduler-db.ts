@@ -1,15 +1,19 @@
 import { supabase } from "@/lib/supabase";
 
 export async function fetchCalendars() {
-  return supabase
+  const { data, error } = await supabase
     .from("scheduler_calendars")
     .select("*")
     .eq("is_active", true)
     .order("id");
+
+  if (error) throw error;
+
+  return data ?? [];
 }
 
 export async function fetchEvents(calendarId: number, from: string, to: string) {
-  return supabase
+  const { data, error } = await supabase
     .from("scheduler_events")
     .select("*")
     .eq("calendar_id", calendarId)
@@ -17,51 +21,44 @@ export async function fetchEvents(calendarId: number, from: string, to: string) 
     .gte("start_at", from)
     .lte("end_at", to)
     .order("start_at");
+
+  if (error) throw error;
+
+  return data ?? [];
 }
 
-export async function createEvent(payload: {
-  calendar_id: number;
-  title: string;
-  category: string;
-  memo: string;
-  start_at: string;
-  end_at: string;
-  is_all_day: boolean;
-}) {
+export async function createEvent(payload: any) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return supabase.from("scheduler_events").insert([
+  const { error } = await supabase.from("scheduler_events").insert([
     {
       ...payload,
       created_by_auth_user_id: user?.id ?? null,
       updated_by_auth_user_id: user?.id ?? null,
     },
   ]);
+
+  if (error) throw error;
 }
 
-export async function updateEvent(
-  id: number,
-  payload: {
-    calendar_id: number;
-    title: string;
-    category: string;
-    memo: string;
-    start_at: string;
-    end_at: string;
-    is_all_day: boolean;
-    updated_by_auth_user_id?: string | null;
-  }
-) {
-  return supabase.from("scheduler_events").update(payload).eq("id", id);
+export async function updateEvent(id: number, payload: any) {
+  const { error } = await supabase
+    .from("scheduler_events")
+    .update(payload)
+    .eq("id", id);
+
+  if (error) throw error;
 }
 
 export async function deleteEvent(id: number) {
-  return supabase
+  const { error } = await supabase
     .from("scheduler_events")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);
+
+  if (error) throw error;
 }
 
 export async function fetchAuditLogs() {
