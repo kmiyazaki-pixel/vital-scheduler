@@ -7,7 +7,7 @@ import {
   fetchCalendars,
   fetchEvents,
   updateEvent,
-} from '@/lib/api';
+} from '@/lib/scheduler-db';
 import { CalendarSummary, EventItem } from '@/lib/types';
 import { useEffect, useMemo, useState } from 'react';
 
