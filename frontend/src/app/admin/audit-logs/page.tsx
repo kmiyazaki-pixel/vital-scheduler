@@ -63,7 +63,7 @@ export default function AuditLogsPage() {
                     <td style={td}>{formatAction(log.action)}</td>
                     <td style={td}>{formatEntityType(log.target_type)}</td>
                     <td style={td}>{log.target_id ?? '-'}</td>
-                    <td style={td}>{log.userId ?? '-'}</td>
+                    <td style={td}>{log.user_name ?? '-'}</td>
                     <td style={detailTd}>
                       <pre style={pre}>{prettyJson(log.detail)}</pre>
                     </td>
