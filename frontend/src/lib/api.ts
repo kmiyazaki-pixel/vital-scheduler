@@ -1,15 +1,22 @@
+import { supabase } from '@/lib/supabase';
 import { AuditLogItem, CalendarSummary, EventItem, UserSummary } from '@/lib/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const token = session?.access_token;
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
-    credentials: 'include',
     cache: 'no-store',
   });
 
@@ -46,7 +53,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export type MeResponse = {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: 'admin' | 'member';
@@ -55,7 +62,7 @@ export type MeResponse = {
 };
 
 export type LoginResponse = {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: 'admin' | 'member';
