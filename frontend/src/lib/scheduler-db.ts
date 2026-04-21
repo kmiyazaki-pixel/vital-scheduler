@@ -41,11 +41,20 @@ export async function createEvent(payload: {
   ]);
 }
 
-export async function updateEvent(id: number, payload: any) {
-  return supabase
-    .from("scheduler_events")
-    .update(payload)
-    .eq("id", id);
+export async function updateEvent(
+  id: number,
+  payload: {
+    calendar_id: number;
+    title: string;
+    category: string;
+    memo: string;
+    start_at: string;
+    end_at: string;
+    is_all_day: boolean;
+    updated_by_auth_user_id?: string | null;
+  }
+) {
+  return supabase.from("scheduler_events").update(payload).eq("id", id);
 }
 
 export async function deleteEvent(id: number) {
