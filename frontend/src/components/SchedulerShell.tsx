@@ -41,12 +41,6 @@ export default function SchedulerShell({
           <Link href="/calendar/week" style={navLink}>
             週表示
           </Link>
-          <Link href="/settings" style={navLink}>
-            設定
-          </Link>
-          <Link href="/admin/users" style={navLink}>
-            ユーザー管理
-          </Link>
           <Link href="/admin/audit-logs" style={navLink}>
             監査ログ
           </Link>
