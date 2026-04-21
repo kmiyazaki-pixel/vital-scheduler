@@ -38,11 +38,11 @@ export type EventPayload = {
 
 export type AuditLogItem = {
   id: number;
-  auth_user_id?: string | null;
-  user_name?: string | null;
+  created_at: string;
+  auth_user_id: string;
+  user_name: string;
   action: string;
-  target_type?: string | null;
-  target_id?: string | null;
-  detail?: Record<string, unknown> | string | null;
-  created_at?: string;
+  target_type: string;
+  target_id: string | null;
+  detail: Record<string, unknown> | null;
 };
