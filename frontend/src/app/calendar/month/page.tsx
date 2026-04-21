@@ -65,7 +65,7 @@ export default function CalendarMonthPage() {
       try {
         setError(null);
         const data = await fetchCalendars();
-        setCalendars(data);
+        setCalendars(data as CalendarSummary[]);
 
         if (data.length > 0) {
           setSelectedCalendarId((prev) => prev ?? data[0].id);
@@ -91,7 +91,7 @@ export default function CalendarMonthPage() {
       const to = formatDateParam(new Date(y, m + 1, 1));
       const data = await fetchEvents(calendarId, from, to);
 
-      setEvents(data);
+      setEvents(data as EventItem[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定取得に失敗しました');
     } finally {
@@ -112,18 +112,28 @@ export default function CalendarMonthPage() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
-  const eventsByDate = useMemo(() => {
-    const map = new Map<string, EventItem[]>();
+  const normalizedEvents = useMemo(() => {
+    return events.map((e) => ({
+      ...e,
+      calendarId: e.calendarId ?? e.calendar_id,
+      startAt: e.startAt ?? e.start_at,
+      endAt: e.endAt ?? e.end_at,
+      allDay: e.allDay ?? e.is_all_day,
+    }));
+  }, [events]);
 
-    for (const e of events) {
-      const key = formatLocalDateKey(new Date(e.startAt));
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, typeof normalizedEvents>();
+
+    for (const e of normalizedEvents) {
+      const key = formatLocalDateKey(new Date(e.startAt as string));
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
     }
 
     return map;
-  }, [events]);
+  }, [normalizedEvents]);
 
   const openCreateModal = (date?: Date) => {
     const baseCalendarId = selectedCalendarId ?? calendars[0]?.id ?? 0;
@@ -139,16 +149,16 @@ export default function CalendarMonthPage() {
     setModalOpen(true);
   };
 
-  const openEditModal = (event: EventItem) => {
+  const openEditModal = (event: (typeof normalizedEvents)[number]) => {
     setForm({
       id: event.id,
-      calendarId: event.calendarId,
+      calendarId: event.calendarId ?? event.calendar_id,
       title: event.title,
       category: event.category,
       memo: event.memo ?? '',
-      startAt: toInputValue(event.startAt),
-      endAt: toInputValue(event.endAt),
-      allDay: event.allDay,
+      startAt: toInputValue(event.startAt as string),
+      endAt: toInputValue(event.endAt as string),
+      allDay: Boolean(event.allDay),
     });
     setModalOpen(true);
   };
@@ -170,14 +180,14 @@ export default function CalendarMonthPage() {
       setError(null);
 
       const payload = {
-  calendar_id: form.calendarId,
-  title: form.title,
-  category: form.category,
-  memo: form.memo,
-  start_at: form.startAt,
-  end_at: form.endAt,
-  is_all_day: form.allDay,
-};
+        calendar_id: form.calendarId,
+        title: form.title.trim(),
+        category: form.category,
+        memo: form.memo,
+        start_at: new Date(form.startAt).toISOString(),
+        end_at: new Date(form.endAt).toISOString(),
+        is_all_day: form.allDay,
+      };
 
       if (form.id) {
         await updateEvent(form.id, payload);
@@ -221,7 +231,7 @@ export default function CalendarMonthPage() {
   };
 
   return (
-    <SchedulerShell>
+    <SchedulerShell title="月表示">
       <div style={wrap}>
         <div style={toolbar}>
           <div style={toolbarLeft}>
@@ -255,61 +265,64 @@ export default function CalendarMonthPage() {
 
         {error && <div style={errorBox}>{error}</div>}
 
-        {loading && <div>読み込み中...</div>}
+        {loading && <div style={loadingBox}>読み込み中...</div>}
 
         {!loading && (
-          <div style={grid}>
-            {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
-              <div key={d} style={dayHeader}>
-                {d}
-              </div>
-            ))}
-
-            {calendarDays.map((date) => {
-              const key = formatLocalDateKey(date);
-              const dayEvents = eventsByDate.get(key) ?? [];
-              const isCurrent = date.getMonth() === month;
-              const isToday = key === todayKey;
-
-              return (
-                <div
-                  key={key}
-                  style={{
-                    ...cell,
-                    ...(isToday ? todayCell : {}),
-                    opacity: isCurrent ? 1 : 0.45,
-                  }}
-                >
-                  <div style={cellHeader}>
-                    <span
-                      style={{
-                        ...dateStyle,
-                        ...(isToday ? todayDateStyle : {}),
-                      }}
-                    >
-                      {date.getDate()}
-                    </span>
-
-                    <button style={miniButton} onClick={() => openCreateModal(date)}>
-                      ＋
-                    </button>
-                  </div>
-
-                  <div style={eventList}>
-                    {dayEvents.map((e) => (
-                      <button
-                        key={e.id}
-                        style={eventItem}
-                        onClick={() => openEditModal(e)}
-                        title={e.title}
-                      >
-                        {e.title}
-                      </button>
-                    ))}
-                  </div>
+          <div style={calendarCard}>
+            <div style={grid}>
+              {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
+                <div key={d} style={dayHeader}>
+                  {d}
                 </div>
-              );
-            })}
+              ))}
+
+              {calendarDays.map((date) => {
+                const key = formatLocalDateKey(date);
+                const dayEvents = eventsByDate.get(key) ?? [];
+                const isCurrent = date.getMonth() === month;
+                const isToday = key === todayKey;
+
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      ...cell,
+                      ...(isToday ? todayCell : {}),
+                      opacity: isCurrent ? 1 : 0.45,
+                    }}
+                  >
+                    <div style={cellHeader}>
+                      <span
+                        style={{
+                          ...dateStyle,
+                          ...(isToday ? todayDateStyle : {}),
+                        }}
+                      >
+                        {date.getDate()}
+                      </span>
+
+                      <button style={miniButton} onClick={() => openCreateModal(date)}>
+                        ＋
+                      </button>
+                    </div>
+
+                    <div style={eventList}>
+                      {dayEvents.map((e) => (
+                        <button
+                          key={e.id}
+                          style={eventItem}
+                          onClick={() => openEditModal(e)}
+                          title={e.title}
+                        >
+                          <div style={eventTitle}>{e.title}</div>
+                          {e.owner_name ? <div style={eventOwner}>担当: {e.owner_name}</div> : null}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -370,7 +383,10 @@ export default function CalendarMonthPage() {
                   >
                     <option value="other">その他</option>
                     <option value="meeting">会議</option>
-                    <option value="vacation">休暇</option>
+                    <option value="work">業務</option>
+                    <option value="review">レビュー</option>
+                    <option value="personal">個人</option>
+                    <option value="holiday">休暇</option>
                     <option value="visit">訪問</option>
                   </select>
                 </label>
@@ -526,41 +542,46 @@ const toolbarRight: React.CSSProperties = {
 
 const title: React.CSSProperties = {
   margin: 0,
-  fontSize: 20,
+  fontSize: 24,
+  color: '#1f2340',
 };
 
 const button: React.CSSProperties = {
-  border: '1px solid rgba(0,0,0,0.12)',
-  borderRadius: 10,
+  border: '1px solid rgba(99,102,241,0.16)',
+  borderRadius: 12,
   background: '#fff',
-  padding: '8px 12px',
+  padding: '10px 14px',
   cursor: 'pointer',
+  fontWeight: 700,
 };
 
 const primaryButton: React.CSSProperties = {
   border: 'none',
-  borderRadius: 10,
-  background: '#1A1916',
-  color: '#F5F3EE',
-  padding: '10px 14px',
+  borderRadius: 12,
+  background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+  color: '#fff',
+  padding: '10px 16px',
   cursor: 'pointer',
+  fontWeight: 800,
+  boxShadow: '0 8px 18px rgba(99, 102, 241, 0.22)',
 };
 
 const dangerButton: React.CSSProperties = {
   border: 'none',
-  borderRadius: 10,
-  background: '#b42318',
+  borderRadius: 12,
+  background: 'linear-gradient(90deg, #ef4444, #dc2626)',
   color: '#fff',
-  padding: '10px 14px',
+  padding: '10px 16px',
   cursor: 'pointer',
+  fontWeight: 800,
 };
 
 const select: React.CSSProperties = {
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: '1px solid rgba(0,0,0,0.12)',
-  background: '#fff',
   minWidth: 220,
+  padding: '10px 12px',
+  borderRadius: 12,
+  border: '1px solid rgba(99,102,241,0.16)',
+  background: '#fff',
 };
 
 const errorBox: React.CSSProperties = {
@@ -569,35 +590,50 @@ const errorBox: React.CSSProperties = {
   lineHeight: 1.5,
   background: '#FEF3F2',
   border: '1px solid rgba(180,35,24,0.15)',
-  borderRadius: 10,
-  padding: '10px 12px',
+  borderRadius: 12,
+  padding: '12px 14px',
+};
+
+const loadingBox: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 16,
+  padding: '20px',
+};
+
+const calendarCard: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
+  borderRadius: 24,
+  padding: 16,
+  boxShadow: '0 14px 30px rgba(91, 98, 133, 0.10)',
 };
 
 const grid: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(7, 1fr)',
-  gap: 6,
+  gap: 1,
+  background: 'rgba(99,102,241,0.08)',
+  borderRadius: 16,
+  overflow: 'hidden',
 };
 
 const dayHeader: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #eef6ff 0%, #dbeafe 100%)',
+  padding: '12px 8px',
   textAlign: 'center',
-  fontWeight: 700,
-  padding: 10,
-  background: '#F5F3EE',
-  borderRadius: 10,
+  fontWeight: 800,
+  color: '#1d4ed8',
 };
 
 const cell: React.CSSProperties = {
-  minHeight: 120,
-  border: '1px solid #ddd',
-  padding: 6,
+  minHeight: 130,
   background: '#fff',
-  borderRadius: 12,
+  padding: 10,
+  display: 'grid',
+  gap: 8,
 };
 
 const todayCell: React.CSSProperties = {
-  border: '2px solid #1A1916',
-  background: '#FFF7E8',
+  background: 'linear-gradient(180deg, #fff8fb 0%, #fdf2f8 100%)',
 };
 
 const cellHeader: React.CSSProperties = {
@@ -607,106 +643,124 @@ const cellHeader: React.CSSProperties = {
 };
 
 const dateStyle: React.CSSProperties = {
-  fontWeight: 700,
-  fontSize: 14,
+  fontWeight: 800,
+  color: '#5b6285',
 };
 
 const todayDateStyle: React.CSSProperties = {
-  color: '#b45309',
+  color: '#be185d',
 };
 
 const miniButton: React.CSSProperties = {
-  border: '1px solid rgba(0,0,0,0.12)',
-  borderRadius: 8,
-  background: '#fff',
-  width: 24,
-  height: 24,
+  border: 'none',
+  borderRadius: 10,
+  background: 'linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)',
+  color: '#166534',
+  width: 28,
+  height: 28,
   cursor: 'pointer',
+  fontWeight: 800,
 };
 
 const eventList: React.CSSProperties = {
-  fontSize: 12,
   display: 'grid',
-  gap: 4,
-  marginTop: 6,
+  gap: 6,
 };
 
 const eventItem: React.CSSProperties = {
-  background: '#eee',
-  padding: '4px 6px',
-  borderRadius: 4,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
   border: 'none',
-  textAlign: 'left',
+  borderRadius: 12,
+  background: 'linear-gradient(135deg, #eef2ff 0%, #e9d5ff 100%)',
+  color: '#312e81',
+  padding: '8px 10px',
   cursor: 'pointer',
+  textAlign: 'left',
+  display: 'grid',
+  gap: 2,
+};
+
+const eventTitle: React.CSSProperties = {
+  fontWeight: 800,
+  fontSize: 13,
+};
+
+const eventOwner: React.CSSProperties = {
+  fontSize: 11,
+  color: '#5b6285',
+  fontWeight: 700,
 };
 
 const overlay: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  background: 'rgba(0,0,0,0.35)',
+  background: 'rgba(15, 23, 42, 0.35)',
   display: 'grid',
   placeItems: 'center',
-  padding: 24,
-  zIndex: 1000,
+  padding: 20,
+  zIndex: 50,
 };
 
 const modal: React.CSSProperties = {
   width: '100%',
-  maxWidth: 560,
-  background: '#fff',
-  borderRadius: 16,
-  padding: 20,
-  boxShadow: '0 16px 48px rgba(0,0,0,0.18)',
-  display: 'grid',
-  gap: 16,
+  maxWidth: 720,
+  background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
+  borderRadius: 24,
+  padding: 24,
+  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.20)',
 };
 
 const modalTitle: React.CSSProperties = {
-  margin: 0,
-  fontSize: 20,
+  margin: '0 0 16px',
+  fontSize: 24,
+  color: '#1f2340',
 };
 
 const formGrid: React.CSSProperties = {
   display: 'grid',
-  gap: 12,
+  gap: 14,
 };
 
 const label: React.CSSProperties = {
   display: 'grid',
-  gap: 6,
-  fontSize: 14,
-};
-
-const checkLabel: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
   gap: 8,
-  fontSize: 14,
+  fontWeight: 700,
+  color: '#394067',
 };
 
 const input: React.CSSProperties = {
   width: '100%',
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: '1px solid rgba(0,0,0,0.12)',
+  padding: '12px 14px',
+  border: '1px solid #d8dcef',
+  borderRadius: 14,
+  fontSize: 16,
+  boxSizing: 'border-box',
   background: '#fff',
 };
 
 const textarea: React.CSSProperties = {
   width: '100%',
   minHeight: 100,
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: '1px solid rgba(0,0,0,0.12)',
+  padding: '12px 14px',
+  border: '1px solid #d8dcef',
+  borderRadius: 14,
+  fontSize: 16,
+  boxSizing: 'border-box',
   background: '#fff',
   resize: 'vertical',
+};
+
+const checkLabel: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  fontWeight: 700,
+  color: '#394067',
 };
 
 const modalActions: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'flex-end',
   gap: 10,
+  marginTop: 18,
+  flexWrap: 'wrap',
 };
