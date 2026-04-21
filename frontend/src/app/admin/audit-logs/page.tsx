@@ -59,10 +59,10 @@ export default function AuditLogsPage() {
               <tbody>
                 {logs.map((log) => (
                   <tr key={log.id}>
-                    <td style={td}>{formatDateTime(log.createdAt)}</td>
+                    <td style={td}>{formatDateTime(log.created_At)}</td>
                     <td style={td}>{formatAction(log.action)}</td>
-                    <td style={td}>{formatEntityType(log.entityType)}</td>
-                    <td style={td}>{log.entityId ?? '-'}</td>
+                    <td style={td}>{formatEntityType(log.target_type)}</td>
+                    <td style={td}>{log.target_id ?? '-'}</td>
                     <td style={td}>{log.userId ?? '-'}</td>
                     <td style={detailTd}>
                       <pre style={pre}>{prettyJson(log.detail)}</pre>
