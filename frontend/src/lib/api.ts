@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { AuditLogItem, CalendarSummary, EventItem, UserSummary } from '@/lib/types';
+import { AuditLogItem, CalendarSummary, EventItem } from '@/lib/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
@@ -87,62 +87,9 @@ export async function fetchMe() {
   return request<MeResponse>('/auth/me');
 }
 
-export async function changeMyPassword(input: {
-  currentPassword: string;
-  newPassword: string;
-}) {
-  return request<{ message: string }>('/users/me/password', {
-    method: 'PUT',
-    body: JSON.stringify(input),
-  });
-}
 
-export async function fetchUsers() {
-  return request<UserSummary[]>('/users');
-}
 
-export async function createUser(input: {
-  name: string;
-  email: string;
-  password: string;
-  role: 'admin' | 'member';
-}) {
-  return request<UserSummary>('/users', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
 
-export async function updateUser(input: {
-  userId: number;
-  name: string;
-  email: string;
-  role: 'admin' | 'member';
-  active: boolean;
-}) {
-  return request<UserSummary>(`/users/${input.userId}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      name: input.name,
-      email: input.email,
-      role: input.role,
-      active: input.active,
-    }),
-  });
-}
-
-export async function updateUserStatus(userId: number, active: boolean) {
-  return request<UserSummary>(`/users/${userId}/status`, {
-    method: 'PATCH',
-    body: JSON.stringify({ active }),
-  });
-}
-
-export async function deleteUser(userId: number) {
-  return request<{ message: string }>(`/users/${userId}`, {
-    method: 'DELETE',
-  });
-}
 
 export async function fetchCalendars() {
   return request<CalendarSummary[]>('/calendars');
