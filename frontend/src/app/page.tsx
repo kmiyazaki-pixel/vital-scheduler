@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 
 export default function HomePage() {
   useEffect(() => {
-    window.location.replace('/login');
+    window.location.replace('/calendar/month');
   }, []);
 
-  return <div>ログインへ移動しています...</div>;
+  return <div>カレンダーへ移動しています...</div>;
 }
