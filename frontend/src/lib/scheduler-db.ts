@@ -8,7 +8,6 @@ export async function fetchCalendars() {
     .order("id");
 
   if (error) throw error;
-
   return data ?? [];
 }
 
@@ -23,33 +22,60 @@ export async function fetchEvents(calendarId: number, from: string, to: string) 
     .order("start_at");
 
   if (error) throw error;
-
   return data ?? [];
 }
 
-export async function createEvent(payload: any) {
+export async function createEvent(payload: {
+  calendar_id: number;
+  title: string;
+  category: string;
+  memo: string;
+  start_at: string;
+  end_at: string;
+  is_all_day: boolean;
+}) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("scheduler_events").insert([
-    {
-      ...payload,
-      created_by_auth_user_id: user?.id ?? null,
-      updated_by_auth_user_id: user?.id ?? null,
-    },
-  ]);
+  const { data, error } = await supabase
+    .from("scheduler_events")
+    .insert([
+      {
+        ...payload,
+        created_by_auth_user_id: user?.id ?? null,
+        updated_by_auth_user_id: user?.id ?? null,
+      },
+    ])
+    .select()
+    .single();
 
   if (error) throw error;
+  return data;
 }
 
-export async function updateEvent(id: number, payload: any) {
-  const { error } = await supabase
+export async function updateEvent(
+  id: number,
+  payload: {
+    calendar_id: number;
+    title: string;
+    category: string;
+    memo: string;
+    start_at: string;
+    end_at: string;
+    is_all_day: boolean;
+    updated_by_auth_user_id?: string | null;
+  }
+) {
+  const { data, error } = await supabase
     .from("scheduler_events")
     .update(payload)
-    .eq("id", id);
+    .eq("id", id)
+    .select()
+    .single();
 
   if (error) throw error;
+  return data;
 }
 
 export async function deleteEvent(id: number) {
@@ -68,9 +94,6 @@ export async function fetchAuditLogs() {
     .order("created_at", { ascending: false })
     .limit(100);
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return data ?? [];
 }
