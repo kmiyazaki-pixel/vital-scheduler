@@ -1,81 +1,52 @@
 package com.vitalarea.scheduler.controller;
 
-import com.vitalarea.scheduler.dto.LoginRequest;
-import com.vitalarea.scheduler.dto.UserResponse;
-import com.vitalarea.scheduler.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final UserService userService;
-    private final SecurityContextRepository securityContextRepository;
-
-    @PostMapping("/login")
-    public UserResponse login(
-            @Valid @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest,
-            HttpServletResponse httpResponse
-    ) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
-        );
-
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
-
-        securityContextRepository.saveContext(context, httpRequest, httpResponse);
-
-        HttpSession session = httpRequest.getSession(false);
-        if (session != null) {
-            session.setMaxInactiveInterval(60 * 60 * 8);
+    @GetMapping("/api/auth/me")
+    public ResponseEntity<?> me(@AuthenticationPrincipal Jwt jwt) {
+        if (jwt == null) {
+            return ResponseEntity.status(401).build();
         }
 
-        return userService.findMe();
+        String email = jwt.getClaimAsString("email");
+
+        String name = "ユーザー";
+        Object meta = jwt.getClaims().get("user_metadata");
+        if (meta instanceof Map<?, ?> map) {
+            Object nameObj = map.get("name");
+            if (nameObj instanceof String s && !s.isBlank()) {
+                name = s;
+            }
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "id", jwt.getSubject(),
+            "email", email,
+            "name", name
+        ));
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<?> me(Authentication authentication) {
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("UNAUTHORIZED");
-        }
-
-        return ResponseEntity.ok(userService.findMe());
+    @PostMapping("/api/auth/login")
+    public ResponseEntity<?> login() {
+        return ResponseEntity.badRequest().body(Map.of(
+            "message", "ログインはTunagから行ってください"
+        ));
     }
 
-    @PostMapping("/logout")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(HttpServletRequest request) {
-        SecurityContextHolder.clearContext();
-
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
+    @PostMapping("/api/auth/logout")
+    public ResponseEntity<?> logout() {
+        return ResponseEntity.ok(Map.of(
+            "message", "ログアウトはTunagから行ってください"
+        ));
     }
 }
