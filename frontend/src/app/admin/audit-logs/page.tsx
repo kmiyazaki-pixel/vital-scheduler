@@ -116,12 +116,13 @@ function formatEntityType(entityType: string) {
   }
 }
 
-function prettyJson(value: string | null) {
-  if (!value) return '-';
+function prettyJson(value: Record<string, unknown> | null) {
+  if (!value) return "-";
+
   try {
-    return JSON.stringify(JSON.parse(value), null, 2);
+    return JSON.stringify(value, null, 2);
   } catch {
-    return value;
+    return String(value);
   }
 }
 
