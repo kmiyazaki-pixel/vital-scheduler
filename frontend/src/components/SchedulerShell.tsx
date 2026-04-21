@@ -1,13 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { logout } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { useState } from 'react';
 
 type SchedulerShellProps = {
   title?: string;
   children: React.ReactNode;
 };
+
+const TUNAG_APP_URL =
+  process.env.NEXT_PUBLIC_TUNAG_APP_URL || 'https://tunag.vercel.app';
 
 export default function SchedulerShell({
   title = 'VitalArea Scheduler',
@@ -18,11 +21,11 @@ export default function SchedulerShell({
   const handleLogout = async () => {
     try {
       setLoggingOut(true);
-      await logout();
+      await supabase.auth.signOut();
     } catch {
       //
     } finally {
-      window.location.replace('/login');
+      window.location.replace(`${TUNAG_APP_URL}/login`);
     }
   };
 
@@ -47,6 +50,9 @@ export default function SchedulerShell({
           <Link href="/admin/audit-logs" style={navLink}>
             監査ログ
           </Link>
+          <a href={TUNAG_APP_URL} style={navLink}>
+            Tunagへ戻る
+          </a>
         </nav>
 
         <button
