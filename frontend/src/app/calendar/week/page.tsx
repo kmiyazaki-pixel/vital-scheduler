@@ -1,7 +1,7 @@
 'use client';
 
 import SchedulerShell from '@/components/SchedulerShell';
-import { createEvent, deleteEvent, fetchCalendars, fetchEvents, updateEvent } from '@/lib/api';
+import { createEvent, deleteEvent, fetchCalendars, fetchEvents, updateEvent } from '@/lib/scheduler-db';
 import { CalendarSummary, EventItem } from '@/lib/types';
 import { useEffect, useMemo, useState } from 'react';
 
