@@ -1,5 +1,21 @@
 import { supabase } from "@/lib/supabase";
 
+async function getCurrentUserInfo() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const userName =
+    (user?.user_metadata?.name as string | undefined)?.trim() ||
+    user?.email?.split("@")[0] ||
+    "ユーザー";
+
+  return {
+    user,
+    userName,
+  };
+}
+
 export async function fetchCalendars() {
   const { data, error } = await supabase
     .from("scheduler_calendars")
@@ -34,15 +50,14 @@ export async function createEvent(payload: {
   end_at: string;
   is_all_day: boolean;
 }) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, userName } = await getCurrentUserInfo();
 
   const { data, error } = await supabase
     .from("scheduler_events")
     .insert([
       {
         ...payload,
+        owner_name: userName,
         created_by_auth_user_id: user?.id ?? null,
         updated_by_auth_user_id: user?.id ?? null,
       },
@@ -64,12 +79,17 @@ export async function updateEvent(
     start_at: string;
     end_at: string;
     is_all_day: boolean;
-    updated_by_auth_user_id?: string | null;
   }
 ) {
+  const { user, userName } = await getCurrentUserInfo();
+
   const { data, error } = await supabase
     .from("scheduler_events")
-    .update(payload)
+    .update({
+      ...payload,
+      owner_name: userName,
+      updated_by_auth_user_id: user?.id ?? null,
+    })
     .eq("id", id)
     .select()
     .single();
