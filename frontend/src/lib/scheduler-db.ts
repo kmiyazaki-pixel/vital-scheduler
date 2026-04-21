@@ -65,9 +65,15 @@ export async function deleteEvent(id: number) {
 }
 
 export async function fetchAuditLogs() {
-  return supabase
+  const { data, error } = await supabase
     .from("scheduler_audit_logs")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(100);
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
 }
