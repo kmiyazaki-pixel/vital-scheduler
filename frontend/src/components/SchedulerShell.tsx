@@ -25,57 +25,115 @@ export default function SchedulerShell({
 
   return (
     <div style={styles.page}>
-      {/* 背景クリックで閉じる */}
+      <style jsx>{`
+        @media (max-width: 959px) {
+          .scheduler-sidebar-mobile {
+            position: fixed !important;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 82vw !important;
+            min-width: 82vw !important;
+            max-width: 82vw !important;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            z-index: 40;
+          }
+
+          .scheduler-main-mobile {
+            padding: 16px !important;
+          }
+
+          .scheduler-menu-button {
+            display: inline-flex !important;
+          }
+        }
+
+        @media (min-width: 960px) {
+          .scheduler-menu-button {
+            display: none !important;
+          }
+        }
+      `}</style>
+
+      <div style={styles.bgCircle1} />
+      <div style={styles.bgCircle2} />
+      <div style={styles.bgCircle3} />
+
       {menuOpen && (
         <div style={styles.overlay} onClick={() => setMenuOpen(false)} />
       )}
 
-      {/* サイドバー */}
-      <aside
+      <div
+        className="scheduler-sidebar-mobile"
         style={{
-          ...styles.sidebar,
-          ...(menuOpen ? styles.sidebarOpen : {}),
+          ...styles.sidebarWrap,
+          ...(menuOpen ? styles.sidebarWrapOpen : {}),
         }}
       >
-        <div>
-          <div style={styles.title}>Scheduler</div>
+        <aside style={styles.sidebar}>
+          <div>
+            <div style={styles.kicker}>SCHEDULER</div>
+            <div style={styles.brand}>VitalArea Scheduler</div>
 
-          <div style={styles.user}>
-            ログイン中: {userInfo?.name || "ユーザー"}
+            <div style={styles.userChip}>
+              ログイン中: {userInfo?.name || userInfo?.email || "ユーザー"}
+            </div>
+
+            <nav style={styles.nav}>
+              <Link
+                href="/calendar/month"
+                style={styles.navLinkBlue}
+                onClick={() => setMenuOpen(false)}
+              >
+                月表示
+              </Link>
+
+              <Link
+                href="/calendar/week"
+                style={styles.navLinkPink}
+                onClick={() => setMenuOpen(false)}
+              >
+                週表示
+              </Link>
+
+              <Link
+                href="/admin/audit-logs"
+                style={styles.navLinkGreen}
+                onClick={() => setMenuOpen(false)}
+              >
+                監査ログ
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  location.href = TUNAG_APP_URL;
+                }}
+                style={styles.navLinkOrange}
+              >
+                Tunagへ戻る
+              </button>
+            </nav>
           </div>
 
-          <Link href="/calendar/month" style={styles.btn}>
-            月表示
-          </Link>
-
-          <Link href="/calendar/week" style={styles.btn}>
-            週表示
-          </Link>
-
-          <Link href="/admin/audit-logs" style={styles.btn}>
-            監査ログ
-          </Link>
-
-          <button
-            style={styles.btn}
-            onClick={() => (location.href = TUNAG_APP_URL)}
-          >
-            Tunagへ戻る
+          <button onClick={logout} style={styles.logout}>
+            ログアウト
           </button>
-        </div>
+        </aside>
+      </div>
 
-        <button onClick={logout} style={styles.logout}>
-          ログアウト
-        </button>
-      </aside>
-
-      {/* メイン */}
-      <main style={styles.main}>
+      <main className="scheduler-main-mobile" style={styles.main}>
         <div style={styles.header}>
-          <button onClick={() => setMenuOpen(true)} style={styles.menuBtn}>
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="scheduler-menu-button"
+            style={styles.menuBtn}
+          >
             ☰
           </button>
-          <h1>{title}</h1>
+          <h1 style={styles.headerTitle}>{title}</h1>
         </div>
 
         <div style={styles.content}>{children}</div>
@@ -84,87 +142,180 @@ export default function SchedulerShell({
   );
 }
 
-const styles: any = {
-  page: {
-    display: "flex",
-    minHeight: "100vh",
-  },
+const baseNavButton: React.CSSProperties = {
+  display: "block",
+  width: "100%",
+  textAlign: "left",
+  textDecoration: "none",
+  border: "none",
+  padding: "12px 14px",
+  borderRadius: 12,
+  fontWeight: 800,
+  cursor: "pointer",
+  boxShadow: "0 8px 18px rgba(91, 98, 133, 0.08)",
+  fontSize: "15px",
+};
 
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    background: "linear-gradient(180deg, #f8f7ff 0%, #eef4ff 100%)",
+    position: "relative",
+    overflow: "hidden",
+  },
+  bgCircle1: {
+    position: "absolute",
+    top: "-60px",
+    left: "-40px",
+    width: "220px",
+    height: "220px",
+    borderRadius: "999px",
+    background: "rgba(236, 72, 153, 0.12)",
+  },
+  bgCircle2: {
+    position: "absolute",
+    top: "120px",
+    right: "-70px",
+    width: "240px",
+    height: "240px",
+    borderRadius: "999px",
+    background: "rgba(59, 130, 246, 0.12)",
+  },
+  bgCircle3: {
+    position: "absolute",
+    bottom: "-80px",
+    left: "35%",
+    width: "260px",
+    height: "260px",
+    borderRadius: "999px",
+    background: "rgba(34, 197, 94, 0.12)",
+  },
   overlay: {
     position: "fixed",
     inset: 0,
     background: "rgba(0,0,0,0.4)",
-    zIndex: 9,
+    zIndex: 20,
   },
-
+  sidebarWrap: {
+    position: "relative",
+    zIndex: 30,
+  },
+  sidebarWrapOpen: {
+    transform: "translateX(0)",
+  },
   sidebar: {
     width: 260,
-    background: "#fff",
-    padding: 16,
+    minWidth: 260,
+    minHeight: "100vh",
+    background: "rgba(255,255,255,0.78)",
+    backdropFilter: "blur(10px)",
+    borderRight: "1px solid rgba(0,0,0,0.06)",
+    padding: 20,
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
-    zIndex: 10,
-
-    /* 👇スマホ対応 */
-    position: "fixed",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    transform: "translateX(-100%)",
-    transition: "0.3s",
+    gap: 20,
   },
-
-  sidebarOpen: {
-    transform: "translateX(0)",
-  },
-
   main: {
     flex: 1,
-    padding: 16,
-    marginLeft: 0,
+    minWidth: 0,
+    padding: 24,
     width: "100%",
+    position: "relative",
+    zIndex: 1,
   },
-
   header: {
     display: "flex",
     alignItems: "center",
     gap: 12,
     marginBottom: 16,
   },
-
-  menuBtn: {
-    fontSize: 20,
-    padding: "6px 10px",
+  headerTitle: {
+    margin: 0,
+    fontSize: 28,
+    fontWeight: 800,
+    color: "#1f2340",
   },
-
+  menuBtn: {
+    display: "none",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid rgba(99,102,241,0.16)",
+    borderRadius: "12px",
+    background: "#fff",
+    width: "44px",
+    height: "44px",
+    cursor: "pointer",
+    fontSize: "22px",
+    fontWeight: 800,
+  },
   content: {
+    background: "linear-gradient(180deg, #ffffff 0%, #fffafb 100%)",
+    borderRadius: 24,
+    padding: 20,
+    boxShadow: "0 14px 30px rgba(91, 98, 133, 0.10)",
+    minHeight: "calc(100vh - 120px)",
     overflow: "hidden",
   },
-
-  title: {
-    fontWeight: "bold",
+  kicker: {
+    display: "inline-block",
+    padding: "6px 12px",
+    borderRadius: "999px",
+    background: "linear-gradient(90deg, #8b5cf6, #ec4899)",
+    color: "#fff",
+    fontSize: "12px",
+    fontWeight: 800,
+    letterSpacing: "0.08em",
+    marginBottom: "12px",
+  },
+  brand: {
+    fontSize: 20,
+    fontWeight: 800,
+    color: "#1f2340",
     marginBottom: 12,
   },
-
-  user: {
-    marginBottom: 20,
-    fontWeight: "bold",
+  userChip: {
+    background: "linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)",
+    color: "#166534",
+    padding: "10px 14px",
+    borderRadius: "12px",
+    fontWeight: 800,
+    boxShadow: "0 8px 18px rgba(16, 185, 129, 0.12)",
+    marginBottom: 18,
   },
-
-  btn: {
-    display: "block",
-    marginBottom: 10,
-    padding: 10,
-    borderRadius: 8,
-    background: "#eee",
-    textDecoration: "none",
+  nav: {
+    display: "grid",
+    gap: 10,
   },
-
+  navLinkBlue: {
+    ...baseNavButton,
+    color: "#1d4ed8",
+    background: "linear-gradient(135deg, #eef6ff 0%, #dbeafe 100%)",
+  },
+  navLinkPink: {
+    ...baseNavButton,
+    color: "#be185d",
+    background: "linear-gradient(135deg, #fff0f5 0%, #ffe4ef 100%)",
+  },
+  navLinkGreen: {
+    ...baseNavButton,
+    color: "#166534",
+    background: "linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)",
+  },
+  navLinkOrange: {
+    ...baseNavButton,
+    color: "#9a3412",
+    background: "linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)",
+  },
   logout: {
-    background: "red",
+    border: "none",
+    borderRadius: 12,
+    background: "linear-gradient(90deg, #6366f1, #8b5cf6)",
     color: "#fff",
-    padding: 10,
-    borderRadius: 8,
+    padding: "12px 14px",
+    cursor: "pointer",
+    fontWeight: 800,
+    boxShadow: "0 8px 18px rgba(99, 102, 241, 0.22)",
   },
 };
