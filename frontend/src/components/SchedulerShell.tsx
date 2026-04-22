@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuthUser } from "@/hooks/use-auth-user";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type SchedulerShellProps = {
   title?: string;
@@ -18,7 +18,18 @@ export default function SchedulerShell({
   children,
 }: SchedulerShellProps) {
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { userInfo } = useAuthUser();
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 900);
+    }
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -32,12 +43,27 @@ export default function SchedulerShell({
   };
 
   return (
-    <div style={page}>
+    <div
+      style={{
+        ...page,
+        display: isMobile ? "block" : "grid",
+        gridTemplateColumns: isMobile ? undefined : "260px 1fr",
+      }}
+    >
       <div style={bgCircle1} />
       <div style={bgCircle2} />
       <div style={bgCircle3} />
 
-      <aside style={sidebar}>
+      <aside
+        style={{
+          ...sidebar,
+          width: isMobile ? "100%" : "260px",
+          minWidth: isMobile ? "100%" : "260px",
+          minHeight: isMobile ? "auto" : "100vh",
+          borderRight: isMobile ? "none" : "1px solid rgba(0,0,0,0.06)",
+          borderBottom: isMobile ? "1px solid rgba(0,0,0,0.06)" : "none",
+        }}
+      >
         <div>
           <div style={kicker}>SCHEDULER</div>
           <div style={brand}>VitalArea Scheduler</div>
@@ -46,7 +72,12 @@ export default function SchedulerShell({
           </div>
         </div>
 
-        <nav style={nav}>
+        <nav
+          style={{
+            ...nav,
+            gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr",
+          }}
+        >
           <Link href="/calendar/month" style={navLinkBlue}>
             月表示
           </Link>
@@ -56,9 +87,16 @@ export default function SchedulerShell({
           <Link href="/admin/audit-logs" style={navLinkGreen}>
             監査ログ
           </Link>
-          <a href={TUNAG_APP_URL} style={navLinkOrange}>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href =
+                process.env.NEXT_PUBLIC_TUNAG_APP_URL || "https://tunag.vercel.app";
+            }}
+            style={backButton}
+          >
             Tunagへ戻る
-          </a>
+          </button>
         </nav>
 
         <button
@@ -71,12 +109,32 @@ export default function SchedulerShell({
         </button>
       </aside>
 
-      <main style={main}>
+      <main
+        style={{
+          ...main,
+          padding: isMobile ? 16 : 24,
+        }}
+      >
         <header style={header}>
-          <h1 style={titleStyle}>{title}</h1>
+          <h1
+            style={{
+              ...titleStyle,
+              fontSize: isMobile ? 24 : 32,
+            }}
+          >
+            {title}
+          </h1>
         </header>
 
-        <section style={content}>{children}</section>
+        <section
+          style={{
+            ...content,
+            minHeight: isMobile ? "auto" : "calc(100vh - 120px)",
+            overflowX: "auto",
+          }}
+        >
+          {children}
+        </section>
       </main>
     </div>
   );
@@ -84,8 +142,6 @@ export default function SchedulerShell({
 
 const page: React.CSSProperties = {
   minHeight: "100vh",
-  display: "grid",
-  gridTemplateColumns: "260px 1fr",
   background: "linear-gradient(180deg, #f8f7ff 0%, #eef4ff 100%)",
   position: "relative",
   overflow: "hidden",
@@ -122,7 +178,6 @@ const bgCircle3: React.CSSProperties = {
 };
 
 const sidebar: React.CSSProperties = {
-  borderRight: "1px solid rgba(0,0,0,0.06)",
   background: "rgba(255,255,255,0.75)",
   backdropFilter: "blur(10px)",
   padding: 20,
@@ -173,6 +228,10 @@ const baseNavLink: React.CSSProperties = {
   textDecoration: "none",
   fontWeight: 800,
   boxShadow: "0 8px 18px rgba(91, 98, 133, 0.08)",
+  border: "none",
+  textAlign: "left",
+  cursor: "pointer",
+  width: "100%",
 };
 
 const navLinkBlue: React.CSSProperties = {
@@ -193,14 +252,13 @@ const navLinkGreen: React.CSSProperties = {
   background: "linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)",
 };
 
-const navLinkOrange: React.CSSProperties = {
+const backButton: React.CSSProperties = {
   ...baseNavLink,
   color: "#9a3412",
   background: "linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)",
 };
 
 const logoutButton: React.CSSProperties = {
-  marginTop: "auto",
   border: "none",
   borderRadius: 12,
   background: "linear-gradient(90deg, #6366f1, #8b5cf6)",
@@ -219,7 +277,6 @@ const disabledLogoutButton: React.CSSProperties = {
 
 const main: React.CSSProperties = {
   minWidth: 0,
-  padding: 24,
   position: "relative",
   zIndex: 1,
 };
@@ -230,7 +287,6 @@ const header: React.CSSProperties = {
 
 const titleStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: 32,
   color: "#1f2340",
 };
 
@@ -239,6 +295,5 @@ const content: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,0.8)",
   borderRadius: 24,
   padding: 20,
-  minHeight: "calc(100vh - 120px)",
   boxShadow: "0 14px 30px rgba(91, 98, 133, 0.10)",
 };
