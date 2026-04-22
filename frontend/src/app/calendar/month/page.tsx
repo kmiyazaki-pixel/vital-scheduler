@@ -174,10 +174,18 @@ export default function CalendarMonthPage() {
   };
 
   const handleSave = async () => {
-    if (!form.calendarId || !form.title.trim() || !form.startAt || !form.endAt) {
-      setError('タイトル、開始、終了は必須です');
+    const missing: string[] = [];
+
+    if (!form.calendarId) missing.push('カレンダー');
+    if (!form.startAt) missing.push('開始');
+    if (!form.endAt) missing.push('終了');
+
+    if (missing.length > 0) {
+      setError(`${missing.join('、')}は必須です`);
       return;
     }
+
+    const safeTitle = form.title.trim() || '新しい予定';
 
     try {
       setSaving(true);
@@ -185,7 +193,7 @@ export default function CalendarMonthPage() {
 
       const payload = {
         calendar_id: form.calendarId,
-        title: form.title,
+        title: safeTitle,
         category: form.category,
         memo: form.memo,
         start_at: form.startAt,
@@ -367,6 +375,7 @@ export default function CalendarMonthPage() {
                         title: e.target.value,
                       }))
                     }
+                    placeholder="未入力なら「新しい予定」で保存されます"
                     style={input}
                     disabled={saving}
                   />
