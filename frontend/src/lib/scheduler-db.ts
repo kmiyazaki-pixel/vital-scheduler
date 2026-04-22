@@ -39,7 +39,9 @@ async function writeAuditLog(input: {
     },
   ]);
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(`監査ログ保存エラー: ${error.message}`);
+  }
 }
 
 export async function fetchCalendars() {
@@ -95,19 +97,23 @@ export async function createEvent(payload: {
     throw new Error(`予定追加エラー: ${error.message}`);
   }
 
-  await writeAuditLog({
-    action: "event_create",
-    targetType: "event",
-    targetId: data.id,
-    detail: {
-      title: payload.title,
-      category: payload.category,
-      calendar_id: payload.calendar_id,
-      start_at: payload.start_at,
-      end_at: payload.end_at,
-      owner_name: userName,
-    },
-  });
+  try {
+    await writeAuditLog({
+      action: "event_create",
+      targetType: "event",
+      targetId: data.id,
+      detail: {
+        title: payload.title,
+        category: payload.category,
+        calendar_id: payload.calendar_id,
+        start_at: payload.start_at,
+        end_at: payload.end_at,
+        owner_name: userName,
+      },
+    });
+  } catch (auditError) {
+    console.error(auditError);
+  }
 
   return data;
 }
@@ -137,21 +143,27 @@ export async function updateEvent(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(`予定更新エラー: ${error.message}`);
+  }
 
-  await writeAuditLog({
-    action: "event_update",
-    targetType: "event",
-    targetId: id,
-    detail: {
-      title: payload.title,
-      category: payload.category,
-      calendar_id: payload.calendar_id,
-      start_at: payload.start_at,
-      end_at: payload.end_at,
-      owner_name: userName,
-    },
-  });
+  try {
+    await writeAuditLog({
+      action: "event_update",
+      targetType: "event",
+      targetId: id,
+      detail: {
+        title: payload.title,
+        category: payload.category,
+        calendar_id: payload.calendar_id,
+        start_at: payload.start_at,
+        end_at: payload.end_at,
+        owner_name: userName,
+      },
+    });
+  } catch (auditError) {
+    console.error(auditError);
+  }
 
   return data;
 }
@@ -164,16 +176,22 @@ export async function deleteEvent(id: number) {
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(`予定削除エラー: ${error.message}`);
+  }
 
-  await writeAuditLog({
-    action: "event_delete",
-    targetType: "event",
-    targetId: id,
-    detail: {
-      owner_name: userName,
-    },
-  });
+  try {
+    await writeAuditLog({
+      action: "event_delete",
+      targetType: "event",
+      targetId: id,
+      detail: {
+        owner_name: userName,
+      },
+    });
+  } catch (auditError) {
+    console.error(auditError);
+  }
 }
 
 export async function fetchAuditLogs() {
