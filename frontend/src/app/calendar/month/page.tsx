@@ -4,16 +4,14 @@ import SchedulerShell from '@/components/SchedulerShell';
 import {
   createEvent,
   deleteEvent,
-  fetchCalendars,
   fetchEvents,
   updateEvent,
 } from '@/lib/scheduler-db';
-import { CalendarSummary, EventItem } from '@/lib/types';
+import { EventItem } from '@/lib/types';
 import { useEffect, useMemo, useState } from 'react';
 
 type EventFormState = {
   id?: number;
-  calendarId: number;
   title: string;
   category: string;
   memo: string;
@@ -23,7 +21,6 @@ type EventFormState = {
 };
 
 const EMPTY_FORM: EventFormState = {
-  calendarId: 1,
   title: '',
   category: 'other',
   memo: '',
@@ -32,10 +29,10 @@ const EMPTY_FORM: EventFormState = {
   allDay: false,
 };
 
+const FIXED_CALENDAR_ID = 1;
+
 export default function CalendarMonthPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [calendars, setCalendars] = useState<CalendarSummary[]>([]);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<number>(1);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -60,42 +57,14 @@ export default function CalendarMonthPage() {
     });
   }, [year, month]);
 
-  useEffect(() => {
-    const loadCalendars = async () => {
-      try {
-        setError(null);
-        const data = await fetchCalendars();
-        const calendarList = data as CalendarSummary[];
-        setCalendars(calendarList);
-
-        if (calendarList.length > 0) {
-          const firstId = Number(calendarList[0].id);
-          setSelectedCalendarId(firstId);
-          setForm((prev) => ({
-            ...prev,
-            calendarId: prev.calendarId || firstId,
-          }));
-        } else {
-          setEvents([]);
-          setLoading(false);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'カレンダー取得に失敗しました');
-        setLoading(false);
-      }
-    };
-
-    loadCalendars();
-  }, []);
-
-  const loadEvents = async (calendarId: number, y: number, m: number) => {
+  const loadEvents = async (y: number, m: number) => {
     try {
       setLoading(true);
       setError(null);
 
       const from = formatDateParam(new Date(y, m, 1));
       const to = formatDateParam(new Date(y, m + 1, 1));
-      const data = await fetchEvents(calendarId, from, to);
+      const data = await fetchEvents(FIXED_CALENDAR_ID, from, to);
 
       setEvents(data as EventItem[]);
     } catch (err) {
@@ -106,14 +75,8 @@ export default function CalendarMonthPage() {
   };
 
   useEffect(() => {
-    if (!selectedCalendarId) {
-      setEvents([]);
-      setLoading(false);
-      return;
-    }
-
-    loadEvents(selectedCalendarId, year, month);
-  }, [selectedCalendarId, year, month]);
+    loadEvents(year, month);
+  }, [year, month]);
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -142,16 +105,12 @@ export default function CalendarMonthPage() {
   }, [normalizedEvents]);
 
   const openCreateModal = (date?: Date) => {
-    const firstCalendarId = calendars.length > 0 ? Number(calendars[0].id) : 1;
-    const baseCalendarId = selectedCalendarId || firstCalendarId;
     const baseDate = date ? new Date(date) : new Date(year, month, 1);
-
     const start = toLocalDateTimeInput(baseDate, 9, 0);
     const end = toLocalDateTimeInput(baseDate, 10, 0);
 
     setForm({
       ...EMPTY_FORM,
-      calendarId: baseCalendarId,
       startAt: start,
       endAt: end,
     });
@@ -162,7 +121,6 @@ export default function CalendarMonthPage() {
   const openEditModal = (event: (typeof normalizedEvents)[number]) => {
     setForm({
       id: event.id,
-      calendarId: Number(event.calendarId ?? event.calendar_id ?? selectedCalendarId ?? 1),
       title: event.title,
       category: event.category,
       memo: event.memo ?? '',
@@ -177,16 +135,12 @@ export default function CalendarMonthPage() {
   const closeModal = () => {
     if (saving) return;
     setModalOpen(false);
-    setForm((prev) => ({
-      ...EMPTY_FORM,
-      calendarId: selectedCalendarId || calendars[0]?.id || 1,
-    }));
+    setForm(EMPTY_FORM);
   };
 
   const handleSave = async () => {
     const missing: string[] = [];
 
-    if (!form.calendarId) missing.push('カレンダー');
     if (!form.startAt) missing.push('開始');
     if (!form.endAt) missing.push('終了');
 
@@ -202,7 +156,7 @@ export default function CalendarMonthPage() {
       setError(null);
 
       const payload = {
-        calendar_id: Number(form.calendarId),
+        calendar_id: FIXED_CALENDAR_ID,
         title: safeTitle,
         category: form.category,
         memo: form.memo,
@@ -218,14 +172,8 @@ export default function CalendarMonthPage() {
       }
 
       setModalOpen(false);
-      setForm({
-        ...EMPTY_FORM,
-        calendarId: selectedCalendarId || calendars[0]?.id || 1,
-      });
-
-      if (selectedCalendarId) {
-        await loadEvents(selectedCalendarId, year, month);
-      }
+      setForm(EMPTY_FORM);
+      await loadEvents(year, month);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定保存に失敗しました');
     } finally {
@@ -243,14 +191,8 @@ export default function CalendarMonthPage() {
       await deleteEvent(form.id);
 
       setModalOpen(false);
-      setForm({
-        ...EMPTY_FORM,
-        calendarId: selectedCalendarId || calendars[0]?.id || 1,
-      });
-
-      if (selectedCalendarId) {
-        await loadEvents(selectedCalendarId, year, month);
-      }
+      setForm(EMPTY_FORM);
+      await loadEvents(year, month);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定削除に失敗しました');
     } finally {
@@ -273,18 +215,6 @@ export default function CalendarMonthPage() {
           </div>
 
           <div style={toolbarRight}>
-            <select
-              value={selectedCalendarId}
-              onChange={(e) => setSelectedCalendarId(Number(e.target.value))}
-              style={select}
-            >
-              {calendars.map((c) => (
-                <option key={c.id} value={Number(c.id)}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-
             <button style={primaryButton} onClick={() => openCreateModal()}>
               予定を追加
             </button>
@@ -360,27 +290,6 @@ export default function CalendarMonthPage() {
               <h3 style={modalTitle}>{form.id ? '予定を編集' : '予定を追加'}</h3>
 
               <div style={formGrid}>
-                <label style={label}>
-                  <span>カレンダー</span>
-                  <select
-                    value={form.calendarId}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        calendarId: Number(e.target.value),
-                      }))
-                    }
-                    style={input}
-                    disabled={saving}
-                  >
-                    {calendars.map((c) => (
-                      <option key={c.id} value={Number(c.id)}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
                 <label style={label}>
                   <span>タイトル</span>
                   <input
@@ -603,14 +512,6 @@ const dangerButton: React.CSSProperties = {
   padding: '10px 16px',
   cursor: 'pointer',
   fontWeight: 800,
-};
-
-const select: React.CSSProperties = {
-  minWidth: 220,
-  padding: '10px 12px',
-  borderRadius: 12,
-  border: '1px solid rgba(99,102,241,0.16)',
-  background: '#fff',
 };
 
 const errorBox: React.CSSProperties = {
