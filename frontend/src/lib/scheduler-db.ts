@@ -91,7 +91,9 @@ export async function createEvent(payload: {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(`予定追加エラー: ${error.message}`);
+  }
 
   await writeAuditLog({
     action: "event_create",
