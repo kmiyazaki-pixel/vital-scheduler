@@ -53,7 +53,7 @@ export default function CalendarWeekPage() {
   }, [weekStart]);
 
   const weekLabel = `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}`;
-  const hours = Array.from({ length: 13 }, (_, i) => i + 8);
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
   const loadEvents = async (days: Date[]) => {
     try {
@@ -117,7 +117,7 @@ export default function CalendarWeekPage() {
     const baseHour = typeof hour === 'number' ? hour : 9;
 
     const start = toLocalDateTimeInput(baseDate, baseHour, 0);
-    const end = toLocalDateTimeInput(baseDate, baseHour + 1, 0);
+    const end = toLocalDateTimeInput(baseDate, Math.min(baseHour + 1, 23), 0);
 
     setForm({
       ...EMPTY_FORM,
@@ -236,50 +236,52 @@ export default function CalendarWeekPage() {
         {loading && <div style={loadingBox}>読み込み中...</div>}
 
         {!loading && (
-          <div style={calendarCard}>
-            <div style={grid}>
-              <div style={timeHeader} />
-              {weekDays.map((day) => (
-                <div key={day.toISOString()} style={dayHeader}>
-                  <div style={dayDate}>{`${day.getMonth() + 1}/${day.getDate()}`}</div>
-                  <div style={dayWeek}>{['日', '月', '火', '水', '木', '金', '土'][day.getDay()]}</div>
-                </div>
-              ))}
+          <div style={weekScrollWrap}>
+            <div style={calendarCard}>
+              <div style={grid}>
+                <div style={timeHeader} />
+                {weekDays.map((day) => (
+                  <div key={day.toISOString()} style={dayHeader}>
+                    <div style={dayDate}>{`${day.getMonth() + 1}/${day.getDate()}`}</div>
+                    <div style={dayWeek}>{['日', '月', '火', '水', '木', '金', '土'][day.getDay()]}</div>
+                  </div>
+                ))}
 
-              {hours.map((hour) => (
-                <div key={hour} style={{ display: 'contents' }}>
-                  <div style={timeCell}>{`${hour}:00`}</div>
-                  {weekDays.map((day) => {
-                    const key = `${day.toISOString().slice(0, 10)}-${hour}`;
-                    const dayEvents = eventsByDayAndHour.get(key) ?? [];
+                {hours.map((hour) => (
+                  <div key={hour} style={{ display: 'contents' }}>
+                    <div style={timeCell}>{`${String(hour).padStart(2, '0')}:00`}</div>
+                    {weekDays.map((day) => {
+                      const key = `${day.toISOString().slice(0, 10)}-${hour}`;
+                      const dayEvents = eventsByDayAndHour.get(key) ?? [];
 
-                    return (
-                      <div key={key} style={cell}>
-                        <div style={cellTop}>
-                          <button style={miniButton} onClick={() => openCreateModal(day, hour)}>
-                            ＋
-                          </button>
+                      return (
+                        <div key={key} style={cell}>
+                          <div style={cellTop}>
+                            <button style={miniButton} onClick={() => openCreateModal(day, hour)}>
+                              ＋
+                            </button>
+                          </div>
+
+                          {dayEvents.map((event) => (
+                            <button
+                              key={event.id}
+                              style={eventItem}
+                              onClick={() => openEditModal(event)}
+                              title={event.title}
+                            >
+                              <div style={eventTitle}>{event.title}</div>
+                              <div style={eventTime}>
+                                {formatTime(event.startAt as string)} - {formatTime(event.endAt as string)}
+                              </div>
+                              {event.owner_name ? <div style={eventOwner}>担当: {event.owner_name}</div> : null}
+                            </button>
+                          ))}
                         </div>
-
-                        {dayEvents.map((event) => (
-                          <button
-                            key={event.id}
-                            style={eventItem}
-                            onClick={() => openEditModal(event)}
-                            title={event.title}
-                          >
-                            <div style={eventTitle}>{event.title}</div>
-                            <div style={eventTime}>
-                              {formatTime(event.startAt as string)} - {formatTime(event.endAt as string)}
-                            </div>
-                            {event.owner_name ? <div style={eventOwner}>担当: {event.owner_name}</div> : null}
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -494,7 +496,16 @@ const loadingBox: React.CSSProperties = {
   padding: '20px',
 };
 
+const weekScrollWrap: React.CSSProperties = {
+  width: '100%',
+  maxHeight: 'calc(100vh - 220px)',
+  overflowX: 'auto',
+  overflowY: 'auto',
+  WebkitOverflowScrolling: 'touch',
+};
+
 const calendarCard: React.CSSProperties = {
+  minWidth: 1100,
   background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
   borderRadius: 24,
   padding: 16,
@@ -503,7 +514,7 @@ const calendarCard: React.CSSProperties = {
 
 const grid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '90px repeat(7, 1fr)',
+  gridTemplateColumns: '90px repeat(7, minmax(140px, 1fr))',
   background: 'rgba(99,102,241,0.08)',
   borderRadius: 16,
   overflow: 'hidden',
