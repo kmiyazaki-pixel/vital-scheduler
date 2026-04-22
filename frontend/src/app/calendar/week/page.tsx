@@ -1,13 +1,12 @@
 'use client';
 
 import SchedulerShell from '@/components/SchedulerShell';
-import { createEvent, deleteEvent, fetchCalendars, fetchEvents, updateEvent } from '@/lib/scheduler-db';
-import { CalendarSummary, EventItem } from '@/lib/types';
+import { createEvent, deleteEvent, fetchEvents, updateEvent } from '@/lib/scheduler-db';
+import { EventItem } from '@/lib/types';
 import { useEffect, useMemo, useState } from 'react';
 
 type EventFormState = {
   id?: number;
-  calendarId: number;
   title: string;
   category: string;
   memo: string;
@@ -17,7 +16,6 @@ type EventFormState = {
 };
 
 const EMPTY_FORM: EventFormState = {
-  calendarId: 1,
   title: '',
   category: 'other',
   memo: '',
@@ -26,15 +24,14 @@ const EMPTY_FORM: EventFormState = {
   allDay: false,
 };
 
+const FIXED_CALENDAR_ID = 1;
+
 export default function CalendarWeekPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [calendars, setCalendars] = useState<CalendarSummary[]>([]);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<number>(1);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EventFormState>(EMPTY_FORM);
 
@@ -58,43 +55,15 @@ export default function CalendarWeekPage() {
   const weekLabel = `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}`;
   const hours = Array.from({ length: 13 }, (_, i) => i + 8);
 
-  useEffect(() => {
-    const loadCalendars = async () => {
-      try {
-        setError(null);
-        const data = await fetchCalendars();
-        const calendarList = data as CalendarSummary[];
-        setCalendars(calendarList);
-
-        if (calendarList.length > 0) {
-          const firstId = Number(calendarList[0].id);
-          setSelectedCalendarId(firstId);
-          setForm((prev) => ({
-            ...prev,
-            calendarId: prev.calendarId || firstId,
-          }));
-        } else {
-          setEvents([]);
-          setLoading(false);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'カレンダー取得に失敗しました');
-        setLoading(false);
-      }
-    };
-
-    loadCalendars();
-  }, []);
-
-  const loadEvents = async (calendarId: number, days: Date[]) => {
+  const loadEvents = async (days: Date[]) => {
     try {
       setLoading(true);
       setError(null);
 
       const from = formatDateParam(days[0]);
       const to = formatDateParam(days[6]);
+      const data = await fetchEvents(FIXED_CALENDAR_ID, from, to);
 
-      const data = await fetchEvents(calendarId, from, to);
       setEvents(data as EventItem[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定取得に失敗しました');
@@ -104,14 +73,8 @@ export default function CalendarWeekPage() {
   };
 
   useEffect(() => {
-    if (!selectedCalendarId) {
-      setEvents([]);
-      setLoading(false);
-      return;
-    }
-
-    loadEvents(selectedCalendarId, weekDays);
-  }, [selectedCalendarId, weekDays]);
+    loadEvents(weekDays);
+  }, [weekDays]);
 
   const prevWeek = () => {
     const d = new Date(currentDate);
@@ -150,8 +113,6 @@ export default function CalendarWeekPage() {
   }, [normalizedEvents]);
 
   const openCreateModal = (date?: Date, hour?: number) => {
-    const firstCalendarId = calendars.length > 0 ? Number(calendars[0].id) : 1;
-    const baseCalendarId = selectedCalendarId || firstCalendarId;
     const baseDate = date ? new Date(date) : new Date(weekDays[0]);
     const baseHour = typeof hour === 'number' ? hour : 9;
 
@@ -160,7 +121,6 @@ export default function CalendarWeekPage() {
 
     setForm({
       ...EMPTY_FORM,
-      calendarId: baseCalendarId,
       startAt: start,
       endAt: end,
     });
@@ -171,7 +131,6 @@ export default function CalendarWeekPage() {
   const openEditModal = (event: (typeof normalizedEvents)[number]) => {
     setForm({
       id: event.id,
-      calendarId: Number(event.calendarId ?? event.calendar_id ?? selectedCalendarId ?? 1),
       title: event.title,
       category: event.category,
       memo: event.memo ?? '',
@@ -186,16 +145,12 @@ export default function CalendarWeekPage() {
   const closeModal = () => {
     if (saving) return;
     setModalOpen(false);
-    setForm({
-      ...EMPTY_FORM,
-      calendarId: selectedCalendarId || calendars[0]?.id || 1,
-    });
+    setForm(EMPTY_FORM);
   };
 
   const handleSave = async () => {
     const missing: string[] = [];
 
-    if (!form.calendarId) missing.push('カレンダー');
     if (!form.startAt) missing.push('開始');
     if (!form.endAt) missing.push('終了');
 
@@ -211,7 +166,7 @@ export default function CalendarWeekPage() {
       setError(null);
 
       const payload = {
-        calendar_id: Number(form.calendarId),
+        calendar_id: FIXED_CALENDAR_ID,
         title: safeTitle,
         category: form.category,
         memo: form.memo,
@@ -227,14 +182,8 @@ export default function CalendarWeekPage() {
       }
 
       setModalOpen(false);
-      setForm({
-        ...EMPTY_FORM,
-        calendarId: selectedCalendarId || calendars[0]?.id || 1,
-      });
-
-      if (selectedCalendarId) {
-        await loadEvents(selectedCalendarId, weekDays);
-      }
+      setForm(EMPTY_FORM);
+      await loadEvents(weekDays);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定保存に失敗しました');
     } finally {
@@ -252,14 +201,8 @@ export default function CalendarWeekPage() {
       await deleteEvent(form.id);
 
       setModalOpen(false);
-      setForm({
-        ...EMPTY_FORM,
-        calendarId: selectedCalendarId || calendars[0]?.id || 1,
-      });
-
-      if (selectedCalendarId) {
-        await loadEvents(selectedCalendarId, weekDays);
-      }
+      setForm(EMPTY_FORM);
+      await loadEvents(weekDays);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定削除に失敗しました');
     } finally {
@@ -282,18 +225,6 @@ export default function CalendarWeekPage() {
           </div>
 
           <div style={toolbarRight}>
-            <select
-              value={selectedCalendarId}
-              onChange={(e) => setSelectedCalendarId(Number(e.target.value))}
-              style={select}
-            >
-              {calendars.map((c) => (
-                <option key={c.id} value={Number(c.id)}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-
             <button style={primaryButton} onClick={() => openCreateModal()}>
               予定を追加
             </button>
@@ -359,22 +290,6 @@ export default function CalendarWeekPage() {
               <h3 style={modalTitle}>{form.id ? '予定を編集' : '予定を追加'}</h3>
 
               <div style={formGrid}>
-                <label style={label}>
-                  カレンダー
-                  <select
-                    value={form.calendarId}
-                    onChange={(e) => setForm((prev) => ({ ...prev, calendarId: Number(e.target.value) }))}
-                    style={input}
-                    disabled={saving}
-                  >
-                    {calendars.map((c) => (
-                      <option key={c.id} value={Number(c.id)}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
                 <label style={label}>
                   タイトル
                   <input
@@ -561,14 +476,6 @@ const dangerButton: React.CSSProperties = {
   padding: '10px 16px',
   cursor: 'pointer',
   fontWeight: 800,
-};
-
-const select: React.CSSProperties = {
-  minWidth: 220,
-  padding: '10px 12px',
-  borderRadius: 12,
-  border: '1px solid rgba(99,102,241,0.16)',
-  background: '#fff',
 };
 
 const errorBox: React.CSSProperties = {
