@@ -226,60 +226,62 @@ export default function CalendarMonthPage() {
         {loading && <div style={loadingBox}>読み込み中...</div>}
 
         {!loading && (
-          <div style={calendarCard}>
-            <div style={grid}>
-              {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
-                <div key={d} style={dayHeader}>
-                  {d}
-                </div>
-              ))}
-
-              {calendarDays.map((date) => {
-                const key = formatLocalDateKey(date);
-                const dayEvents = eventsByDate.get(key) ?? [];
-                const isCurrent = date.getMonth() === month;
-                const isToday = key === todayKey;
-
-                return (
-                  <div
-                    key={key}
-                    style={{
-                      ...cell,
-                      ...(isToday ? todayCell : {}),
-                      opacity: isCurrent ? 1 : 0.45,
-                    }}
-                  >
-                    <div style={cellHeader}>
-                      <span
-                        style={{
-                          ...dateStyle,
-                          ...(isToday ? todayDateStyle : {}),
-                        }}
-                      >
-                        {date.getDate()}
-                      </span>
-
-                      <button style={miniButton} onClick={() => openCreateModal(date)}>
-                        ＋
-                      </button>
-                    </div>
-
-                    <div style={eventList}>
-                      {dayEvents.map((e) => (
-                        <button
-                          key={e.id}
-                          style={eventItem}
-                          onClick={() => openEditModal(e)}
-                          title={e.title}
-                        >
-                          <div style={eventTitle}>{e.title}</div>
-                          {e.owner_name ? <div style={eventOwner}>担当: {e.owner_name}</div> : null}
-                        </button>
-                      ))}
-                    </div>
+          <div style={calendarScrollWrap}>
+            <div style={calendarCard}>
+              <div style={grid}>
+                {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
+                  <div key={d} style={dayHeader}>
+                    {d}
                   </div>
-                );
-              })}
+                ))}
+
+                {calendarDays.map((date) => {
+                  const key = formatLocalDateKey(date);
+                  const dayEvents = eventsByDate.get(key) ?? [];
+                  const isCurrent = date.getMonth() === month;
+                  const isToday = key === todayKey;
+
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        ...cell,
+                        ...(isToday ? todayCell : {}),
+                        opacity: isCurrent ? 1 : 0.45,
+                      }}
+                    >
+                      <div style={cellHeader}>
+                        <span
+                          style={{
+                            ...dateStyle,
+                            ...(isToday ? todayDateStyle : {}),
+                          }}
+                        >
+                          {date.getDate()}
+                        </span>
+
+                        <button style={miniButton} onClick={() => openCreateModal(date)}>
+                          ＋
+                        </button>
+                      </div>
+
+                      <div style={eventList}>
+                        {dayEvents.map((e) => (
+                          <button
+                            key={e.id}
+                            style={eventItem}
+                            onClick={() => openEditModal(e)}
+                            title={e.title}
+                          >
+                            <div style={eventTitle}>{e.title}</div>
+                            {e.owner_name ? <div style={eventOwner}>担当: {e.owner_name}</div> : null}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -530,7 +532,15 @@ const loadingBox: React.CSSProperties = {
   padding: '20px',
 };
 
+const calendarScrollWrap: React.CSSProperties = {
+  width: '100%',
+  overflowX: 'auto',
+  overflowY: 'auto',
+  WebkitOverflowScrolling: 'touch',
+};
+
 const calendarCard: React.CSSProperties = {
+  minWidth: 980,
   background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
   borderRadius: 24,
   padding: 16,
@@ -539,7 +549,7 @@ const calendarCard: React.CSSProperties = {
 
 const grid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(7, 1fr)',
+  gridTemplateColumns: 'repeat(7, minmax(130px, 1fr))',
   gap: 1,
   background: 'rgba(99,102,241,0.08)',
   borderRadius: 16,
