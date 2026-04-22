@@ -8,6 +8,8 @@ import { useState } from "react";
 const TUNAG_APP_URL =
   process.env.NEXT_PUBLIC_TUNAG_APP_URL || "https://tunag.vercel.app";
 
+const SIDEBAR_ITEM_WIDTH = 292;
+
 export default function SchedulerShell({
   title,
   children,
@@ -144,7 +146,8 @@ export default function SchedulerShell({
 
 const baseNavButton: React.CSSProperties = {
   display: "block",
-  width: "100%",
+  width: SIDEBAR_ITEM_WIDTH,
+  maxWidth: "100%",
   boxSizing: "border-box",
   textAlign: "left",
   textDecoration: "none",
@@ -277,19 +280,21 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 12,
   },
   userChip: {
-  width: "100%",
-  boxSizing: "border-box",
-  background: "linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)",
-  color: "#166534",
-  padding: "10px 14px",
-  borderRadius: "12px",
-  fontWeight: 800,
-  boxShadow: "0 8px 18px rgba(16, 185, 129, 0.12)",
-  marginBottom: 18,
-},
+    width: SIDEBAR_ITEM_WIDTH,
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    background: "linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)",
+    color: "#166534",
+    padding: "10px 14px",
+    borderRadius: "12px",
+    fontWeight: 800,
+    boxShadow: "0 8px 18px rgba(16, 185, 129, 0.12)",
+    marginBottom: 18,
+  },
   nav: {
     display: "grid",
     gap: 10,
+    width: "100%",
   },
   navLinkBlue: {
     ...baseNavButton,
