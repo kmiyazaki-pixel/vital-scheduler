@@ -137,8 +137,10 @@ export default function CalendarMonthPage() {
 
   const openCreateModal = (date?: Date) => {
     const baseCalendarId = selectedCalendarId ?? calendars[0]?.id ?? 0;
-    const start = date ? toLocalDateTimeInput(date, 9, 0) : '';
-    const end = date ? toLocalDateTimeInput(date, 10, 0) : '';
+    const baseDate = date ? new Date(date) : new Date(year, month, 1);
+
+    const start = toLocalDateTimeInput(baseDate, 9, 0);
+    const end = toLocalDateTimeInput(baseDate, 10, 0);
 
     setForm({
       ...EMPTY_FORM,
@@ -146,6 +148,7 @@ export default function CalendarMonthPage() {
       startAt: start,
       endAt: end,
     });
+    setError(null);
     setModalOpen(true);
   };
 
@@ -160,6 +163,7 @@ export default function CalendarMonthPage() {
       endAt: toInputValue(event.endAt as string),
       allDay: Boolean(event.allDay),
     });
+    setError(null);
     setModalOpen(true);
   };
 
@@ -179,15 +183,15 @@ export default function CalendarMonthPage() {
       setSaving(true);
       setError(null);
 
-     const payload = {
-  calendar_id: form.calendarId,
-  title: form.title,
-  category: form.category,
-  memo: form.memo,
-  start_at: form.startAt,
-  end_at: form.endAt,
-  is_all_day: form.allDay,
-};
+      const payload = {
+        calendar_id: form.calendarId,
+        title: form.title,
+        category: form.category,
+        memo: form.memo,
+        start_at: form.startAt,
+        end_at: form.endAt,
+        is_all_day: form.allDay,
+      };
 
       if (form.id) {
         await updateEvent(form.id, payload);
