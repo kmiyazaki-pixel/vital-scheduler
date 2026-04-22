@@ -17,7 +17,7 @@ type EventFormState = {
 };
 
 const EMPTY_FORM: EventFormState = {
-  calendarId: 0,
+  calendarId: 1,
   title: '',
   category: 'other',
   memo: '',
@@ -29,7 +29,7 @@ const EMPTY_FORM: EventFormState = {
 export default function CalendarWeekPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendars, setCalendars] = useState<CalendarSummary[]>([]);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<number | null>(null);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<number>(1);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,12 +63,18 @@ export default function CalendarWeekPage() {
       try {
         setError(null);
         const data = await fetchCalendars();
-        setCalendars(data as CalendarSummary[]);
+        const calendarList = data as CalendarSummary[];
+        setCalendars(calendarList);
 
-        if (data.length > 0) {
-          setSelectedCalendarId((prev) => prev ?? data[0].id);
+        if (calendarList.length > 0) {
+          const firstId = Number(calendarList[0].id);
+          setSelectedCalendarId(firstId);
+          setForm((prev) => ({
+            ...prev,
+            calendarId: prev.calendarId || firstId,
+          }));
         } else {
-          setSelectedCalendarId(null);
+          setEvents([]);
           setLoading(false);
         }
       } catch (err) {
@@ -144,7 +150,8 @@ export default function CalendarWeekPage() {
   }, [normalizedEvents]);
 
   const openCreateModal = (date?: Date, hour?: number) => {
-    const baseCalendarId = selectedCalendarId ?? calendars[0]?.id ?? 0;
+    const firstCalendarId = calendars.length > 0 ? Number(calendars[0].id) : 1;
+    const baseCalendarId = selectedCalendarId || firstCalendarId;
     const baseDate = date ? new Date(date) : new Date(weekDays[0]);
     const baseHour = typeof hour === 'number' ? hour : 9;
 
@@ -164,7 +171,7 @@ export default function CalendarWeekPage() {
   const openEditModal = (event: (typeof normalizedEvents)[number]) => {
     setForm({
       id: event.id,
-      calendarId: event.calendarId ?? event.calendar_id,
+      calendarId: Number(event.calendarId ?? event.calendar_id ?? selectedCalendarId ?? 1),
       title: event.title,
       category: event.category,
       memo: event.memo ?? '',
@@ -179,22 +186,33 @@ export default function CalendarWeekPage() {
   const closeModal = () => {
     if (saving) return;
     setModalOpen(false);
-    setForm(EMPTY_FORM);
+    setForm({
+      ...EMPTY_FORM,
+      calendarId: selectedCalendarId || calendars[0]?.id || 1,
+    });
   };
 
   const handleSave = async () => {
-    if (!form.calendarId || !form.title.trim() || !form.startAt || !form.endAt) {
-      setError('タイトル、開始、終了は必須です');
+    const missing: string[] = [];
+
+    if (!form.calendarId) missing.push('カレンダー');
+    if (!form.startAt) missing.push('開始');
+    if (!form.endAt) missing.push('終了');
+
+    if (missing.length > 0) {
+      setError(`${missing.join('、')}は必須です`);
       return;
     }
+
+    const safeTitle = form.title.trim() || '新しい予定';
 
     try {
       setSaving(true);
       setError(null);
 
       const payload = {
-        calendar_id: form.calendarId,
-        title: form.title,
+        calendar_id: Number(form.calendarId),
+        title: safeTitle,
         category: form.category,
         memo: form.memo,
         start_at: form.startAt,
@@ -209,7 +227,10 @@ export default function CalendarWeekPage() {
       }
 
       setModalOpen(false);
-      setForm(EMPTY_FORM);
+      setForm({
+        ...EMPTY_FORM,
+        calendarId: selectedCalendarId || calendars[0]?.id || 1,
+      });
 
       if (selectedCalendarId) {
         await loadEvents(selectedCalendarId, weekDays);
@@ -231,7 +252,10 @@ export default function CalendarWeekPage() {
       await deleteEvent(form.id);
 
       setModalOpen(false);
-      setForm(EMPTY_FORM);
+      setForm({
+        ...EMPTY_FORM,
+        calendarId: selectedCalendarId || calendars[0]?.id || 1,
+      });
 
       if (selectedCalendarId) {
         await loadEvents(selectedCalendarId, weekDays);
@@ -259,12 +283,12 @@ export default function CalendarWeekPage() {
 
           <div style={toolbarRight}>
             <select
-              value={selectedCalendarId ?? ''}
+              value={selectedCalendarId}
               onChange={(e) => setSelectedCalendarId(Number(e.target.value))}
               style={select}
             >
               {calendars.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option key={c.id} value={Number(c.id)}>
                   {c.name}
                 </option>
               ))}
@@ -344,7 +368,7 @@ export default function CalendarWeekPage() {
                     disabled={saving}
                   >
                     {calendars.map((c) => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.id} value={Number(c.id)}>
                         {c.name}
                       </option>
                     ))}
@@ -356,6 +380,7 @@ export default function CalendarWeekPage() {
                   <input
                     value={form.title}
                     onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="未入力なら「新しい予定」で保存されます"
                     style={input}
                     disabled={saving}
                   />
