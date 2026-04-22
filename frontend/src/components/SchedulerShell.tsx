@@ -8,6 +8,7 @@ import { useState } from "react";
 const TUNAG_APP_URL =
   process.env.NEXT_PUBLIC_TUNAG_APP_URL || "https://tunag.vercel.app";
 
+const SIDEBAR_WIDTH = 240;
 const SIDEBAR_ITEM_WIDTH = 220;
 
 export default function SchedulerShell({
@@ -209,18 +210,18 @@ const styles: Record<string, React.CSSProperties> = {
     transform: "translateX(0)",
   },
   sidebar: {
-    width: 260,
-    minWidth: 260,
-    minHeight: "100vh",
-    background: "rgba(255,255,255,0.78)",
-    backdropFilter: "blur(10px)",
-    borderRight: "1px solid rgba(0,0,0,0.06)",
-    padding: 20,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    gap: 20,
-  },
+  width: SIDEBAR_WIDTH,
+  minWidth: SIDEBAR_WIDTH,
+  minHeight: "100vh",
+  background: "rgba(255,255,255,0.78)",
+  backdropFilter: "blur(10px)",
+  borderRight: "1px solid rgba(0,0,0,0.06)",
+  padding: 16,
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+  gap: 20,
+},
   main: {
     flex: 1,
     minWidth: 0,
