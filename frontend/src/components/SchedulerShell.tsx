@@ -8,7 +8,7 @@ import { useState } from "react";
 const TUNAG_APP_URL =
   process.env.NEXT_PUBLIC_TUNAG_APP_URL || "https://tunag.vercel.app";
 
-const SIDEBAR_ITEM_WIDTH = 280;
+const SIDEBAR_ITEM_WIDTH = 220;
 
 export default function SchedulerShell({
   title,
