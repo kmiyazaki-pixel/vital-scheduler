@@ -188,14 +188,14 @@ export default function CalendarWeekPage() {
       setError(null);
 
       const payload = {
-        calendar_id: form.calendarId,
-        title: form.title.trim(),
-        category: form.category,
-        memo: form.memo,
-        start_at: new Date(form.startAt).toISOString(),
-        end_at: new Date(form.endAt).toISOString(),
-        is_all_day: form.allDay,
-      };
+  calendar_id: form.calendarId,
+  title: form.title,
+  category: form.category,
+  memo: form.memo,
+  start_at: form.startAt,
+  end_at: form.endAt,
+  is_all_day: form.allDay,
+};
 
       if (form.id) {
         await updateEvent(form.id, payload);
