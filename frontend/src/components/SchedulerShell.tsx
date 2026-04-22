@@ -5,240 +5,166 @@ import { supabase } from "@/lib/supabase";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import { useState } from "react";
 
-type SchedulerShellProps = {
-  title?: string;
-  children: React.ReactNode;
-};
-
 const TUNAG_APP_URL =
   process.env.NEXT_PUBLIC_TUNAG_APP_URL || "https://tunag.vercel.app";
 
 export default function SchedulerShell({
-  title = "VitalArea Scheduler",
+  title,
   children,
-}: SchedulerShellProps) {
-  const [loggingOut, setLoggingOut] = useState(false);
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const { userInfo } = useAuthUser();
 
-  const handleLogout = async () => {
-    try {
-      setLoggingOut(true);
-      await supabase.auth.signOut();
-    } catch {
-      //
-    } finally {
-      window.location.replace(`${TUNAG_APP_URL}/login`);
-    }
+  const logout = async () => {
+    await supabase.auth.signOut();
+    location.href = `${TUNAG_APP_URL}/login`;
   };
 
   return (
-    <div style={page}>
-      <div style={bgCircle1} />
-      <div style={bgCircle2} />
-      <div style={bgCircle3} />
+    <div style={styles.page}>
+      {/* 背景クリックで閉じる */}
+      {menuOpen && (
+        <div style={styles.overlay} onClick={() => setMenuOpen(false)} />
+      )}
 
-      <aside style={sidebar}>
+      {/* サイドバー */}
+      <aside
+        style={{
+          ...styles.sidebar,
+          ...(menuOpen ? styles.sidebarOpen : {}),
+        }}
+      >
         <div>
-          <div style={kicker}>SCHEDULER</div>
-          <div style={brand}>VitalArea Scheduler</div>
-          <div style={userChip}>
-            ログイン中: {userInfo?.name || userInfo?.email || "ユーザー"}
-          </div>
-        </div>
+          <div style={styles.title}>Scheduler</div>
 
-        <nav style={nav}>
-          <Link href="/calendar/month" style={navLinkBlue}>
+          <div style={styles.user}>
+            ログイン中: {userInfo?.name || "ユーザー"}
+          </div>
+
+          <Link href="/calendar/month" style={styles.btn}>
             月表示
           </Link>
-          <Link href="/calendar/week" style={navLinkPink}>
+
+          <Link href="/calendar/week" style={styles.btn}>
             週表示
           </Link>
-          <Link href="/admin/audit-logs" style={navLinkGreen}>
+
+          <Link href="/admin/audit-logs" style={styles.btn}>
             監査ログ
           </Link>
-          <a href={TUNAG_APP_URL} style={navLinkOrange}>
-            Tunagへ戻る
-          </a>
-        </nav>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={loggingOut}
-          style={loggingOut ? disabledLogoutButton : logoutButton}
-        >
-          {loggingOut ? "ログアウト中..." : "ログアウト"}
+          <button
+            style={styles.btn}
+            onClick={() => (location.href = TUNAG_APP_URL)}
+          >
+            Tunagへ戻る
+          </button>
+        </div>
+
+        <button onClick={logout} style={styles.logout}>
+          ログアウト
         </button>
       </aside>
 
-      <main style={main}>
-        <header style={header}>
-          <h1 style={titleStyle}>{title}</h1>
-        </header>
+      {/* メイン */}
+      <main style={styles.main}>
+        <div style={styles.header}>
+          <button onClick={() => setMenuOpen(true)} style={styles.menuBtn}>
+            ☰
+          </button>
+          <h1>{title}</h1>
+        </div>
 
-        <section style={content}>{children}</section>
+        <div style={styles.content}>{children}</div>
       </main>
     </div>
   );
 }
 
-const page: React.CSSProperties = {
-  minHeight: "100vh",
-  display: "grid",
-  gridTemplateColumns: "260px 1fr",
-  background: "linear-gradient(180deg, #f8f7ff 0%, #eef4ff 100%)",
-  position: "relative",
-  overflow: "hidden",
-};
+const styles: any = {
+  page: {
+    display: "flex",
+    minHeight: "100vh",
+  },
 
-const bgCircle1: React.CSSProperties = {
-  position: "absolute",
-  top: "-60px",
-  left: "-40px",
-  width: "220px",
-  height: "220px",
-  borderRadius: "999px",
-  background: "rgba(236, 72, 153, 0.12)",
-};
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.4)",
+    zIndex: 9,
+  },
 
-const bgCircle2: React.CSSProperties = {
-  position: "absolute",
-  top: "120px",
-  right: "-70px",
-  width: "240px",
-  height: "240px",
-  borderRadius: "999px",
-  background: "rgba(59, 130, 246, 0.12)",
-};
+  sidebar: {
+    width: 260,
+    background: "#fff",
+    padding: 16,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    zIndex: 10,
 
-const bgCircle3: React.CSSProperties = {
-  position: "absolute",
-  bottom: "-80px",
-  left: "35%",
-  width: "260px",
-  height: "260px",
-  borderRadius: "999px",
-  background: "rgba(34, 197, 94, 0.12)",
-};
+    /* 👇スマホ対応 */
+    position: "fixed",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    transform: "translateX(-100%)",
+    transition: "0.3s",
+  },
 
-const sidebar: React.CSSProperties = {
-  borderRight: "1px solid rgba(0,0,0,0.06)",
-  background: "rgba(255,255,255,0.75)",
-  backdropFilter: "blur(10px)",
-  padding: 20,
-  display: "flex",
-  flexDirection: "column",
-  gap: 20,
-  position: "relative",
-  zIndex: 1,
-};
+  sidebarOpen: {
+    transform: "translateX(0)",
+  },
 
-const kicker: React.CSSProperties = {
-  display: "inline-block",
-  padding: "6px 12px",
-  borderRadius: "999px",
-  background: "linear-gradient(90deg, #8b5cf6, #ec4899)",
-  color: "#fff",
-  fontSize: "12px",
-  fontWeight: 800,
-  letterSpacing: "0.08em",
-  marginBottom: "12px",
-};
+  main: {
+    flex: 1,
+    padding: 16,
+    marginLeft: 0,
+    width: "100%",
+  },
 
-const brand: React.CSSProperties = {
-  fontSize: 20,
-  fontWeight: 800,
-  color: "#1f2340",
-  marginBottom: 12,
-};
+  header: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
 
-const userChip: React.CSSProperties = {
-  background: "linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)",
-  color: "#166534",
-  padding: "10px 14px",
-  borderRadius: "12px",
-  fontWeight: 800,
-  boxShadow: "0 8px 18px rgba(16, 185, 129, 0.12)",
-};
+  menuBtn: {
+    fontSize: 20,
+    padding: "6px 10px",
+  },
 
-const nav: React.CSSProperties = {
-  display: "grid",
-  gap: 10,
-};
+  content: {
+    overflow: "hidden",
+  },
 
-const baseNavLink: React.CSSProperties = {
-  display: "block",
-  padding: "12px 14px",
-  borderRadius: 12,
-  textDecoration: "none",
-  fontWeight: 800,
-  boxShadow: "0 8px 18px rgba(91, 98, 133, 0.08)",
-};
+  title: {
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
 
-const navLinkBlue: React.CSSProperties = {
-  ...baseNavLink,
-  color: "#1d4ed8",
-  background: "linear-gradient(135deg, #eef6ff 0%, #dbeafe 100%)",
-};
+  user: {
+    marginBottom: 20,
+    fontWeight: "bold",
+  },
 
-const navLinkPink: React.CSSProperties = {
-  ...baseNavLink,
-  color: "#be185d",
-  background: "linear-gradient(135deg, #fff0f5 0%, #ffe4ef 100%)",
-};
+  btn: {
+    display: "block",
+    marginBottom: 10,
+    padding: 10,
+    borderRadius: 8,
+    background: "#eee",
+    textDecoration: "none",
+  },
 
-const navLinkGreen: React.CSSProperties = {
-  ...baseNavLink,
-  color: "#166534",
-  background: "linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)",
-};
-
-const navLinkOrange: React.CSSProperties = {
-  ...baseNavLink,
-  color: "#9a3412",
-  background: "linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)",
-};
-
-const logoutButton: React.CSSProperties = {
-  marginTop: "auto",
-  border: "none",
-  borderRadius: 12,
-  background: "linear-gradient(90deg, #6366f1, #8b5cf6)",
-  color: "#fff",
-  padding: "12px 14px",
-  cursor: "pointer",
-  fontWeight: 800,
-  boxShadow: "0 8px 18px rgba(99, 102, 241, 0.22)",
-};
-
-const disabledLogoutButton: React.CSSProperties = {
-  ...logoutButton,
-  opacity: 0.6,
-  cursor: "not-allowed",
-};
-
-const main: React.CSSProperties = {
-  minWidth: 0,
-  padding: 24,
-  position: "relative",
-  zIndex: 1,
-};
-
-const header: React.CSSProperties = {
-  marginBottom: 20,
-};
-
-const titleStyle: React.CSSProperties = {
-  margin: 0,
-  fontSize: 32,
-  color: "#1f2340",
-};
-
-const content: React.CSSProperties = {
-  background: "linear-gradient(180deg, #ffffff 0%, #fffafb 100%)",
-  border: "1px solid rgba(255,255,255,0.8)",
-  borderRadius: 24,
-  padding: 20,
-  minHeight: "calc(100vh - 120px)",
-  boxShadow: "0 14px 30px rgba(91, 98, 133, 0.10)",
+  logout: {
+    background: "red",
+    color: "#fff",
+    padding: 10,
+    borderRadius: 8,
+  },
 };
