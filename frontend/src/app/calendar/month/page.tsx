@@ -23,7 +23,7 @@ type EventFormState = {
 };
 
 const EMPTY_FORM: EventFormState = {
-  calendarId: 0,
+  calendarId: 1,
   title: '',
   category: 'other',
   memo: '',
@@ -35,7 +35,7 @@ const EMPTY_FORM: EventFormState = {
 export default function CalendarMonthPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendars, setCalendars] = useState<CalendarSummary[]>([]);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<number | null>(null);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<number>(1);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,12 +65,18 @@ export default function CalendarMonthPage() {
       try {
         setError(null);
         const data = await fetchCalendars();
-        setCalendars(data as CalendarSummary[]);
+        const calendarList = data as CalendarSummary[];
+        setCalendars(calendarList);
 
-        if (data.length > 0) {
-          setSelectedCalendarId((prev) => prev ?? data[0].id);
+        if (calendarList.length > 0) {
+          const firstId = Number(calendarList[0].id);
+          setSelectedCalendarId(firstId);
+          setForm((prev) => ({
+            ...prev,
+            calendarId: prev.calendarId || firstId,
+          }));
         } else {
-          setSelectedCalendarId(null);
+          setEvents([]);
           setLoading(false);
         }
       } catch (err) {
@@ -136,7 +142,8 @@ export default function CalendarMonthPage() {
   }, [normalizedEvents]);
 
   const openCreateModal = (date?: Date) => {
-    const baseCalendarId = selectedCalendarId ?? calendars[0]?.id ?? 0;
+    const firstCalendarId = calendars.length > 0 ? Number(calendars[0].id) : 1;
+    const baseCalendarId = selectedCalendarId || firstCalendarId;
     const baseDate = date ? new Date(date) : new Date(year, month, 1);
 
     const start = toLocalDateTimeInput(baseDate, 9, 0);
@@ -155,7 +162,7 @@ export default function CalendarMonthPage() {
   const openEditModal = (event: (typeof normalizedEvents)[number]) => {
     setForm({
       id: event.id,
-      calendarId: event.calendarId ?? event.calendar_id,
+      calendarId: Number(event.calendarId ?? event.calendar_id ?? selectedCalendarId ?? 1),
       title: event.title,
       category: event.category,
       memo: event.memo ?? '',
@@ -170,7 +177,10 @@ export default function CalendarMonthPage() {
   const closeModal = () => {
     if (saving) return;
     setModalOpen(false);
-    setForm(EMPTY_FORM);
+    setForm((prev) => ({
+      ...EMPTY_FORM,
+      calendarId: selectedCalendarId || calendars[0]?.id || 1,
+    }));
   };
 
   const handleSave = async () => {
@@ -192,7 +202,7 @@ export default function CalendarMonthPage() {
       setError(null);
 
       const payload = {
-        calendar_id: form.calendarId,
+        calendar_id: Number(form.calendarId),
         title: safeTitle,
         category: form.category,
         memo: form.memo,
@@ -208,7 +218,10 @@ export default function CalendarMonthPage() {
       }
 
       setModalOpen(false);
-      setForm(EMPTY_FORM);
+      setForm({
+        ...EMPTY_FORM,
+        calendarId: selectedCalendarId || calendars[0]?.id || 1,
+      });
 
       if (selectedCalendarId) {
         await loadEvents(selectedCalendarId, year, month);
@@ -230,7 +243,10 @@ export default function CalendarMonthPage() {
       await deleteEvent(form.id);
 
       setModalOpen(false);
-      setForm(EMPTY_FORM);
+      setForm({
+        ...EMPTY_FORM,
+        calendarId: selectedCalendarId || calendars[0]?.id || 1,
+      });
 
       if (selectedCalendarId) {
         await loadEvents(selectedCalendarId, year, month);
@@ -258,12 +274,12 @@ export default function CalendarMonthPage() {
 
           <div style={toolbarRight}>
             <select
-              value={selectedCalendarId ?? ''}
+              value={selectedCalendarId}
               onChange={(e) => setSelectedCalendarId(Number(e.target.value))}
               style={select}
             >
               {calendars.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option key={c.id} value={Number(c.id)}>
                   {c.name}
                 </option>
               ))}
@@ -358,7 +374,7 @@ export default function CalendarMonthPage() {
                     disabled={saving}
                   >
                     {calendars.map((c) => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.id} value={Number(c.id)}>
                         {c.name}
                       </option>
                     ))}
