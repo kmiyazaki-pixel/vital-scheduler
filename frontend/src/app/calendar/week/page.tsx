@@ -145,8 +145,11 @@ export default function CalendarWeekPage() {
 
   const openCreateModal = (date?: Date, hour?: number) => {
     const baseCalendarId = selectedCalendarId ?? calendars[0]?.id ?? 0;
-    const start = date && typeof hour === 'number' ? toLocalDateTimeInput(date, hour, 0) : '';
-    const end = date && typeof hour === 'number' ? toLocalDateTimeInput(date, hour + 1, 0) : '';
+    const baseDate = date ? new Date(date) : new Date(weekDays[0]);
+    const baseHour = typeof hour === 'number' ? hour : 9;
+
+    const start = toLocalDateTimeInput(baseDate, baseHour, 0);
+    const end = toLocalDateTimeInput(baseDate, baseHour + 1, 0);
 
     setForm({
       ...EMPTY_FORM,
@@ -154,6 +157,7 @@ export default function CalendarWeekPage() {
       startAt: start,
       endAt: end,
     });
+    setError(null);
     setModalOpen(true);
   };
 
@@ -168,6 +172,7 @@ export default function CalendarWeekPage() {
       endAt: toInputValue(event.endAt as string),
       allDay: Boolean(event.allDay),
     });
+    setError(null);
     setModalOpen(true);
   };
 
@@ -188,14 +193,14 @@ export default function CalendarWeekPage() {
       setError(null);
 
       const payload = {
-  calendar_id: form.calendarId,
-  title: form.title,
-  category: form.category,
-  memo: form.memo,
-  start_at: form.startAt,
-  end_at: form.endAt,
-  is_all_day: form.allDay,
-};
+        calendar_id: form.calendarId,
+        title: form.title,
+        category: form.category,
+        memo: form.memo,
+        start_at: form.startAt,
+        end_at: form.endAt,
+        is_all_day: form.allDay,
+      };
 
       if (form.id) {
         await updateEvent(form.id, payload);
