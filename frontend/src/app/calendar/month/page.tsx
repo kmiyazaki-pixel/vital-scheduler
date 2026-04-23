@@ -8,6 +8,7 @@ import {
   updateEvent,
 } from '@/lib/scheduler-db';
 import { EventItem } from '@/lib/types';
+import { isHoliday } from 'holiday-jp-dayjs';
 import { useEffect, useMemo, useState } from 'react';
 
 type EventFormState = {
@@ -253,23 +254,48 @@ export default function CalendarMonthPage() {
           <div style={calendarScrollWrap}>
             <div style={calendarCard}>
               <div style={grid}>
-                {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
-                  <div key={d} style={dayHeader}>
-                    {d}
-                  </div>
-                ))}
+                {['日', '月', '火', '水', '木', '金', '土'].map((d, index) => {
+                  const headerStyle =
+                    index === 0
+                      ? sundayHeader
+                      : index === 6
+                      ? saturdayHeader
+                      : dayHeader;
+
+                  return (
+                    <div key={d} style={headerStyle}>
+                      {d}
+                    </div>
+                  );
+                })}
 
                 {calendarDays.map((date) => {
                   const key = formatLocalDateKey(date);
                   const dayEvents = eventsByDate.get(key) ?? [];
                   const isCurrent = date.getMonth() === month;
                   const isToday = key === todayKey;
+                  const dayType = getDayType(date);
+
+                  const holidayCellStyle =
+                    dayType === 'holiday' || dayType === 'sunday'
+                      ? sundayCell
+                      : dayType === 'saturday'
+                      ? saturdayCell
+                      : {};
+
+                  const holidayDateStyle =
+                    dayType === 'holiday' || dayType === 'sunday'
+                      ? sundayDateStyle
+                      : dayType === 'saturday'
+                      ? saturdayDateStyle
+                      : {};
 
                   return (
                     <div
                       key={key}
                       style={{
                         ...cell,
+                        ...holidayCellStyle,
                         ...(isToday ? todayCell : {}),
                         opacity: isCurrent ? 1 : 0.45,
                       }}
@@ -278,6 +304,7 @@ export default function CalendarMonthPage() {
                         <span
                           style={{
                             ...dateStyle,
+                            ...holidayDateStyle,
                             ...(isToday ? todayDateStyle : {}),
                           }}
                         >
@@ -477,6 +504,15 @@ export default function CalendarMonthPage() {
   );
 }
 
+function getDayType(date: Date) {
+  const day = date.getDay();
+
+  if (isHoliday(date)) return 'holiday';
+  if (day === 0) return 'sunday';
+  if (day === 6) return 'saturday';
+  return 'weekday';
+}
+
 function buildLocalIso(date: string, time: string) {
   const [year, month, day] = date.split('-').map(Number);
   const [hour, minute] = time.split(':').map(Number);
@@ -621,12 +657,36 @@ const dayHeader: React.CSSProperties = {
   color: '#1d4ed8',
 };
 
+const sundayHeader: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
+  padding: '12px 8px',
+  textAlign: 'center',
+  fontWeight: 800,
+  color: '#dc2626',
+};
+
+const saturdayHeader: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+  padding: '12px 8px',
+  textAlign: 'center',
+  fontWeight: 800,
+  color: '#2563eb',
+};
+
 const cell: React.CSSProperties = {
   minHeight: 130,
   background: '#fff',
   padding: 10,
   display: 'grid',
   gap: 8,
+};
+
+const sundayCell: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%)',
+};
+
+const saturdayCell: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)',
 };
 
 const todayCell: React.CSSProperties = {
@@ -642,6 +702,14 @@ const cellHeader: React.CSSProperties = {
 const dateStyle: React.CSSProperties = {
   fontWeight: 800,
   color: '#5b6285',
+};
+
+const sundayDateStyle: React.CSSProperties = {
+  color: '#dc2626',
+};
+
+const saturdayDateStyle: React.CSSProperties = {
+  color: '#2563eb',
 };
 
 const todayDateStyle: React.CSSProperties = {
