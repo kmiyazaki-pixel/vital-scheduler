@@ -3,6 +3,7 @@
 import SchedulerShell from '@/components/SchedulerShell';
 import { createEvent, deleteEvent, fetchEvents, updateEvent } from '@/lib/scheduler-db';
 import { EventItem } from '@/lib/types';
+import { isHoliday } from 'holiday-jp-dayjs';
 import { useEffect, useMemo, useState } from 'react';
 
 type EventFormState = {
@@ -240,12 +241,37 @@ export default function CalendarWeekPage() {
             <div style={calendarCard}>
               <div style={grid}>
                 <div style={timeHeader} />
-                {weekDays.map((day) => (
-                  <div key={day.toISOString()} style={dayHeader}>
-                    <div style={dayDate}>{`${day.getMonth() + 1}/${day.getDate()}`}</div>
-                    <div style={dayWeek}>{['日', '月', '火', '水', '木', '金', '土'][day.getDay()]}</div>
-                  </div>
-                ))}
+                {weekDays.map((day) => {
+                  const dayType = getDayType(day);
+
+                  const headerStyle =
+                    dayType === 'holiday' || dayType === 'sunday'
+                      ? sundayHeader
+                      : dayType === 'saturday'
+                      ? saturdayHeader
+                      : dayHeader;
+
+                  const dateTextStyle =
+                    dayType === 'holiday' || dayType === 'sunday'
+                      ? sundayDateStyle
+                      : dayType === 'saturday'
+                      ? saturdayDateStyle
+                      : dayDate;
+
+                  const weekTextStyle =
+                    dayType === 'holiday' || dayType === 'sunday'
+                      ? sundayWeekStyle
+                      : dayType === 'saturday'
+                      ? saturdayWeekStyle
+                      : dayWeek;
+
+                  return (
+                    <div key={day.toISOString()} style={headerStyle}>
+                      <div style={dateTextStyle}>{`${day.getMonth() + 1}/${day.getDate()}`}</div>
+                      <div style={weekTextStyle}>{['日', '月', '火', '水', '木', '金', '土'][day.getDay()]}</div>
+                    </div>
+                  );
+                })}
 
                 {hours.map((hour) => (
                   <div key={hour} style={{ display: 'contents' }}>
@@ -253,9 +279,17 @@ export default function CalendarWeekPage() {
                     {weekDays.map((day) => {
                       const key = `${day.toISOString().slice(0, 10)}-${hour}`;
                       const dayEvents = eventsByDayAndHour.get(key) ?? [];
+                      const dayType = getDayType(day);
+
+                      const cellStyle =
+                        dayType === 'holiday' || dayType === 'sunday'
+                          ? sundayCell
+                          : dayType === 'saturday'
+                          ? saturdayCell
+                          : {};
 
                       return (
-                        <div key={key} style={cell}>
+                        <div key={key} style={{ ...cell, ...cellStyle }}>
                           <div style={cellTop}>
                             <button style={miniButton} onClick={() => openCreateModal(day, hour)}>
                               ＋
@@ -379,6 +413,15 @@ export default function CalendarWeekPage() {
       </div>
     </SchedulerShell>
   );
+}
+
+function getDayType(date: Date) {
+  const day = date.getDay();
+
+  if (isHoliday(date)) return 'holiday';
+  if (day === 0) return 'sunday';
+  if (day === 6) return 'saturday';
+  return 'weekday';
 }
 
 function formatDate(date: Date) {
@@ -531,14 +574,50 @@ const dayHeader: React.CSSProperties = {
   textAlign: 'center',
 };
 
+const sundayHeader: React.CSSProperties = {
+  padding: '12px 8px',
+  background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
+  borderLeft: '1px solid rgba(99,102,241,0.08)',
+  textAlign: 'center',
+};
+
+const saturdayHeader: React.CSSProperties = {
+  padding: '12px 8px',
+  background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+  borderLeft: '1px solid rgba(99,102,241,0.08)',
+  textAlign: 'center',
+};
+
 const dayDate: React.CSSProperties = {
   fontWeight: 800,
   color: '#1f2340',
 };
 
+const sundayDateStyle: React.CSSProperties = {
+  fontWeight: 800,
+  color: '#dc2626',
+};
+
+const saturdayDateStyle: React.CSSProperties = {
+  fontWeight: 800,
+  color: '#2563eb',
+};
+
 const dayWeek: React.CSSProperties = {
   fontSize: 12,
   color: '#5b6285',
+  fontWeight: 700,
+};
+
+const sundayWeekStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: '#dc2626',
+  fontWeight: 700,
+};
+
+const saturdayWeekStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: '#2563eb',
   fontWeight: 700,
 };
 
@@ -558,6 +637,14 @@ const cell: React.CSSProperties = {
   textAlign: 'left',
   padding: 6,
   minHeight: 76,
+};
+
+const sundayCell: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%)',
+};
+
+const saturdayCell: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)',
 };
 
 const cellTop: React.CSSProperties = {
