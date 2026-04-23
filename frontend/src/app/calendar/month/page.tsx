@@ -1,4 +1,4 @@
-'use client'; 
+'use client';
 
 import SchedulerShell from '@/components/SchedulerShell';
 import {
@@ -8,7 +8,7 @@ import {
   updateEvent,
 } from '@/lib/scheduler-db';
 import { EventItem } from '@/lib/types';
-import { isHoliday } from 'holiday-jp-dayjs';
+import { between, isHoliday } from 'holiday-jp-dayjs';
 import { useEffect, useMemo, useState } from 'react';
 
 type EventFormState = {
@@ -21,6 +21,13 @@ type EventFormState = {
   endDate: string;
   endTime: string;
   allDay: boolean;
+};
+
+type NormalizedEvent = EventItem & {
+  calendarId?: number;
+  startAt?: string;
+  endAt?: string;
+  allDay?: boolean;
 };
 
 const EMPTY_FORM: EventFormState = {
@@ -86,21 +93,22 @@ export default function CalendarMonthPage() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
-  const normalizedEvents = useMemo(() => {
+  const normalizedEvents = useMemo<NormalizedEvent[]>(() => {
     return events.map((e) => ({
       ...e,
-      calendarId: e.calendarId ?? e.calendar_id,
-      startAt: e.startAt ?? e.start_at,
-      endAt: e.endAt ?? e.end_at,
-      allDay: e.allDay ?? e.is_all_day,
+      calendarId: (e as any).calendarId ?? (e as any).calendar_id,
+      startAt: (e as any).startAt ?? (e as any).start_at,
+      endAt: (e as any).endAt ?? (e as any).end_at,
+      allDay: (e as any).allDay ?? (e as any).is_all_day,
     }));
   }, [events]);
 
   const eventsByDate = useMemo(() => {
-    const map = new Map<string, typeof normalizedEvents>();
+    const map = new Map<string, NormalizedEvent[]>();
 
     for (const e of normalizedEvents) {
-      const key = formatLocalDateKey(new Date(e.startAt as string));
+      if (!e.startAt) continue;
+      const key = formatLocalDateKey(new Date(e.startAt));
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
@@ -123,7 +131,7 @@ export default function CalendarMonthPage() {
     setModalOpen(true);
   };
 
-  const openEditModal = (event: (typeof normalizedEvents)[number]) => {
+  const openEditModal = (event: NormalizedEvent) => {
     const start = new Date(event.startAt as string);
     const end = new Date(event.endAt as string);
 
@@ -162,11 +170,9 @@ export default function CalendarMonthPage() {
     }
 
     const safeTitle = form.title.trim() || '新しい予定';
-
     const startAt = form.allDay
       ? buildLocalIso(form.startDate, '00:00')
       : buildLocalIso(form.startDate, form.startTime);
-
     const endAt = form.allDay
       ? buildLocalIso(form.endDate, '23:59')
       : buildLocalIso(form.endDate, form.endTime);
@@ -212,9 +218,7 @@ export default function CalendarMonthPage() {
     try {
       setSaving(true);
       setError(null);
-
       await deleteEvent(form.id);
-
       setModalOpen(false);
       setForm(EMPTY_FORM);
       await loadEvents(year, month);
@@ -227,112 +231,147 @@ export default function CalendarMonthPage() {
 
   return (
     <SchedulerShell title="月表示">
-      <div style={wrap}>
+      <div style={pageWrap}>
         <div style={toolbar}>
-          <div style={toolbarLeft}>
-            <button style={button} onClick={prevMonth}>
+          <div style={monthNav}>
+            <button onClick={prevMonth} style={navButton}>
               前月
             </button>
-            <h2 style={title}>{monthLabel}</h2>
-            <button style={button} onClick={nextMonth}>
+            <h2 style={monthTitle}>{monthLabel}</h2>
+            <button onClick={nextMonth} style={navButton}>
               次月
             </button>
           </div>
 
-          <div style={toolbarRight}>
-            <button style={primaryButton} onClick={() => openCreateModal()}>
-              予定を追加
-            </button>
-          </div>
+          <button onClick={() => openCreateModal()} style={mainButton}>
+            予定を追加
+          </button>
         </div>
 
         {error && <div style={errorBox}>{error}</div>}
-
         {loading && <div style={loadingBox}>読み込み中...</div>}
 
         {!loading && (
-          <div style={calendarScrollWrap}>
-            <div style={calendarCard}>
-              <div style={grid}>
-                {['日', '月', '火', '水', '木', '金', '土'].map((d, index) => {
-                  const headerStyle =
-                    index === 0
-                      ? sundayHeader
-                      : index === 6
-                        ? saturdayHeader
-                        : dayHeader;
+          <div style={calendarWrap}>
+            {['日', '月', '火', '水', '木', '金', '土'].map((d, index) => {
+              const headerStyle =
+                index === 0
+                  ? { ...dayHeader, ...sundayHeader }
+                  : index === 6
+                    ? { ...dayHeader, ...saturdayHeader }
+                    : dayHeader;
 
-                  return (
-                    <div key={d} style={headerStyle}>
-                      {d}
-                    </div>
-                  );
-                })}
+              return (
+                <div key={d} style={headerStyle}>
+                  {d}
+                </div>
+              );
+            })}
 
-                {calendarDays.map((date) => {
-                  const key = formatLocalDateKey(date);
-                  const dayEvents = eventsByDate.get(key) ?? [];
-                  const isCurrent = date.getMonth() === month;
-                  const isToday = key === todayKey;
-                  const dayType = getDayType(date);
+            {calendarDays.map((date) => {
+              const key = formatLocalDateKey(date);
+              const dayEvents = eventsByDate.get(key) ?? [];
+              const isCurrent = date.getMonth() === month;
+              const isToday = key === todayKey;
+              const dayType = getDayType(date);
+              const holidayName = getHolidayName(date);
 
-                  const holidayCellStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayCell
-                      : dayType === 'saturday'
-                        ? saturdayCell
-                        : {};
+              const holidayCellStyle =
+                dayType === 'holiday' || dayType === 'sunday'
+                  ? sundayCell
+                  : dayType === 'saturday'
+                    ? saturdayCell
+                    : {};
 
-                  const holidayDateStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayDateStyle
-                      : dayType === 'saturday'
-                        ? saturdayDateStyle
-                        : {};
+              const holidayDateStyle =
+                dayType === 'holiday' || dayType === 'sunday'
+                  ? sundayDateStyle
+                  : dayType === 'saturday'
+                    ? saturdayDateStyle
+                    : {};
 
-                  return (
-                    <div
-                      key={key}
+              return (
+                <div
+                  key={key}
+                  style={{
+                    ...dayCell,
+                    ...holidayCellStyle,
+                    opacity: isCurrent ? 1 : 0.42,
+                    boxShadow: isToday ? 'inset 0 0 0 2px #2563eb' : undefined,
+                  }}
+                >
+                  <div style={dayTopRow}>
+                    <button
+                      type="button"
+                      onClick={() => openCreateModal(date)}
+                      style={dayDateButton}
+                    >
+                      <span
+                        style={{
+                          ...dayDateText,
+                          ...holidayDateStyle,
+                          ...(isToday ? todayDateBadge : {}),
+                        }}
+                      >
+                        {date.getDate()}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => openCreateModal(date)}
+                      style={addMiniButton}
+                      title="この日に予定を追加"
+                    >
+                      ＋
+                    </button>
+                  </div>
+
+                  <div style={weekdayRow}>
+                    <span
                       style={{
-                        ...cell,
-                        ...holidayCellStyle,
-                        opacity: isCurrent ? 1 : 0.45,
+                        ...weekdayText,
+                        ...(dayType === 'holiday' || dayType === 'sunday'
+                          ? sundayDateStyle
+                          : dayType === 'saturday'
+                            ? saturdayDateStyle
+                            : {}),
                       }}
                     >
-                      <div style={cellHeader}>
-                        <span
-                          style={{
-                            ...dateStyle,
-                            ...holidayDateStyle,
-                            ...(isToday ? todayDateStyle : {}),
-                          }}
-                        >
-                          {date.getDate()}
-                        </span>
+                      {formatWeekdayShort(date)}
+                    </span>
+                  </div>
 
-                        <button style={miniButton} onClick={() => openCreateModal(date)}>
-                          ＋
-                        </button>
-                      </div>
-
-                      <div style={eventList}>
-                        {dayEvents.map((e) => (
-                          <button
-                            key={e.id}
-                            style={eventItem}
-                            onClick={() => openEditModal(e)}
-                            title={e.title}
-                          >
-                            <div style={eventTitle}>{e.title}</div>
-                            {e.owner_name ? <div style={eventOwner}>担当: {e.owner_name}</div> : null}
-                          </button>
-                        ))}
-                      </div>
+                  {holidayName ? (
+                    <div style={holidayNameText} title={holidayName}>
+                      {holidayName}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                  ) : (
+                    <div style={holidaySpacer} />
+                  )}
+
+                  <div style={eventsArea}>
+                    {dayEvents.map((e) => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => openEditModal(e)}
+                        title={e.title}
+                        style={{
+                          ...eventChip,
+                          ...eventCategoryStyle(e.category),
+                        }}
+                      >
+                        <div style={eventTitle}>{e.title}</div>
+                        {e.owner_name ? (
+                          <div style={eventMeta}>担当: {e.owner_name}</div>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -341,125 +380,47 @@ export default function CalendarMonthPage() {
             <div style={modal} onClick={(e) => e.stopPropagation()}>
               <h3 style={modalTitle}>{form.id ? '予定を編集' : '予定を追加'}</h3>
 
-              <div style={formGrid}>
-                <label style={label}>
-                  <span>タイトル</span>
-                  <input
-                    value={form.title}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        title: e.target.value,
-                      }))
-                    }
-                    placeholder="未入力なら「新しい予定」で保存されます"
-                    style={input}
-                    disabled={saving}
-                  />
-                </label>
+              <label style={field}>
+                <span style={labelText}>タイトル</span>
+                <input
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      title: e.target.value,
+                    }))
+                  }
+                  placeholder="未入力なら「新しい予定」で保存されます"
+                  style={input}
+                  disabled={saving}
+                />
+              </label>
 
-                <label style={label}>
-                  <span>区分</span>
-                  <select
-                    value={form.category}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        category: e.target.value,
-                      }))
-                    }
-                    style={input}
-                    disabled={saving}
-                  >
-                    <option value="other">その他</option>
-                    <option value="meeting">会議</option>
-                    <option value="work">業務</option>
-                    <option value="review">レビュー</option>
-                    <option value="personal">個人</option>
-                    <option value="holiday">休暇</option>
-                    <option value="visit">訪問</option>
-                  </select>
-                </label>
+              <label style={field}>
+                <span style={labelText}>区分</span>
+                <select
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      category: e.target.value,
+                    }))
+                  }
+                  style={input}
+                  disabled={saving}
+                >
+                  <option value="other">その他</option>
+                  <option value="meeting">会議</option>
+                  <option value="work">業務</option>
+                  <option value="review">レビュー</option>
+                  <option value="personal">個人</option>
+                  <option value="vacation">休暇</option>
+                  <option value="visit">訪問</option>
+                </select>
+              </label>
 
-                <div style={dateTimeRow}>
-                  <label style={halfLabel}>
-                    <span>開始日</span>
-                    <div style={dateInlineBox}>
-                      <input
-                        type="date"
-                        value={form.startDate}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            startDate: e.target.value,
-                          }))
-                        }
-                        style={dateInlineInput}
-                        disabled={saving}
-                      />
-                      <span style={dateInlineWeekday}>
-                        {form.startDate ? formatWeekdayJa(form.startDate) : ''}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label style={halfLabel}>
-                    <span>開始時刻</span>
-                    <input
-                      type="time"
-                      value={form.startTime}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          startTime: e.target.value,
-                        }))
-                      }
-                      style={input}
-                      disabled={saving || form.allDay}
-                    />
-                  </label>
-                </div>
-
-                <div style={dateTimeRow}>
-                  <label style={halfLabel}>
-                    <span>終了日</span>
-                    <div style={dateInlineBox}>
-                      <input
-                        type="date"
-                        value={form.endDate}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            endDate: e.target.value,
-                          }))
-                        }
-                        style={dateInlineInput}
-                        disabled={saving}
-                      />
-                      <span style={dateInlineWeekday}>
-                        {form.endDate ? formatWeekdayJa(form.endDate) : ''}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label style={halfLabel}>
-                    <span>終了時刻</span>
-                    <input
-                      type="time"
-                      value={form.endTime}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          endTime: e.target.value,
-                        }))
-                      }
-                      style={input}
-                      disabled={saving || form.allDay}
-                    />
-                  </label>
-                </div>
-
-                <label style={checkLabel}>
+              <div style={checkRow}>
+                <label style={checkboxLabel}>
                   <input
                     type="checkbox"
                     checked={form.allDay}
@@ -473,35 +434,116 @@ export default function CalendarMonthPage() {
                   />
                   終日
                 </label>
+              </div>
 
-                <label style={label}>
-                  <span>メモ</span>
-                  <textarea
-                    value={form.memo}
+              <div style={dateTimeGrid}>
+                <label style={field}>
+                  <span style={labelText}>開始日</span>
+                  <div style={dateInlineWrap}>
+                    <input
+                      type="date"
+                      value={form.startDate}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          startDate: e.target.value,
+                        }))
+                      }
+                      style={dateInlineInput}
+                      disabled={saving}
+                    />
+                    <span style={weekdayInlineText}>
+                      {form.startDate ? formatWeekdayJa(form.startDate) : ''}
+                    </span>
+                  </div>
+                </label>
+
+                <label style={field}>
+                  <span style={labelText}>開始時刻</span>
+                  <input
+                    type="time"
+                    value={form.startTime}
                     onChange={(e) =>
                       setForm((prev) => ({
                         ...prev,
-                        memo: e.target.value,
+                        startTime: e.target.value,
                       }))
                     }
-                    style={textarea}
-                    disabled={saving}
+                    style={input}
+                    disabled={saving || form.allDay}
+                  />
+                </label>
+
+                <label style={field}>
+                  <span style={labelText}>終了日</span>
+                  <div style={dateInlineWrap}>
+                    <input
+                      type="date"
+                      value={form.endDate}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          endDate: e.target.value,
+                        }))
+                      }
+                      style={dateInlineInput}
+                      disabled={saving}
+                    />
+                    <span style={weekdayInlineText}>
+                      {form.endDate ? formatWeekdayJa(form.endDate) : ''}
+                    </span>
+                  </div>
+                </label>
+
+                <label style={field}>
+                  <span style={labelText}>終了時刻</span>
+                  <input
+                    type="time"
+                    value={form.endTime}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        endTime: e.target.value,
+                      }))
+                    }
+                    style={input}
+                    disabled={saving || form.allDay}
                   />
                 </label>
               </div>
 
+              <label style={field}>
+                <span style={labelText}>メモ</span>
+                <textarea
+                  value={form.memo}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      memo: e.target.value,
+                    }))
+                  }
+                  style={textarea}
+                  rows={4}
+                  disabled={saving}
+                />
+              </label>
+
               <div style={modalActions}>
-                <button style={button} onClick={closeModal} disabled={saving}>
+                <button onClick={closeModal} style={subButton} disabled={saving}>
                   キャンセル
                 </button>
 
-                {form.id && (
-                  <button style={dangerButton} onClick={handleDelete} disabled={saving}>
+                {form.id ? (
+                  <button
+                    onClick={handleDelete}
+                    style={dangerButton}
+                    disabled={saving}
+                  >
                     削除
                   </button>
-                )}
+                ) : null}
 
-                <button style={primaryButton} onClick={handleSave} disabled={saving}>
+                <button onClick={handleSave} style={mainButton} disabled={saving}>
                   {saving ? '保存中...' : '保存'}
                 </button>
               </div>
@@ -513,27 +555,22 @@ export default function CalendarMonthPage() {
   );
 }
 
-function getDayType(date: Date) {
-  const day = date.getDay();
-
+function getDayType(date: Date): 'weekday' | 'saturday' | 'sunday' | 'holiday' {
   if (isHoliday(date)) return 'holiday';
-  if (day === 0) return 'sunday';
-  if (day === 6) return 'saturday';
+  if (date.getDay() === 0) return 'sunday';
+  if (date.getDay() === 6) return 'saturday';
   return 'weekday';
 }
 
-function buildLocalIso(date: string, time: string) {
-  const [year, month, day] = date.split('-').map(Number);
-  const [hour, minute] = time.split(':').map(Number);
-  const localDate = new Date(year, month - 1, day, hour, minute, 0, 0);
-  return localDate.toISOString();
-}
+function getHolidayName(date: Date): string {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
 
-function formatDateParam(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  const holidays = between(start, end);
+  return holidays[0]?.name ?? '';
 }
 
 function formatLocalDateKey(date: Date) {
@@ -543,11 +580,12 @@ function formatLocalDateKey(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
+function formatDateParam(date: Date) {
+  return formatLocalDateKey(date);
+}
+
 function toDateInputValue(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  return formatLocalDateKey(date);
 }
 
 function toTimeInputValue(date: Date) {
@@ -556,14 +594,39 @@ function toTimeInputValue(date: Date) {
   return `${hh}:${mm}`;
 }
 
-function formatWeekdayJa(date: string) {
-  const [year, month, day] = date.split('-').map(Number);
-  const d = new Date(year, month - 1, day);
-  const weekdays = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
-  return weekdays[d.getDay()];
+function buildLocalIso(dateStr: string, timeStr: string) {
+  return `${dateStr}T${timeStr}:00`;
 }
 
-const wrap: React.CSSProperties = {
+function formatWeekdayJa(dateStr: string) {
+  const date = new Date(`${dateStr}T00:00:00`);
+  return `(${['日', '月', '火', '水', '木', '金', '土'][date.getDay()]})`;
+}
+
+function formatWeekdayShort(date: Date) {
+  return ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+}
+
+function eventCategoryStyle(category: string): React.CSSProperties {
+  switch (category) {
+    case 'meeting':
+      return { background: '#e8f0ff', color: '#1d4ed8' };
+    case 'work':
+      return { background: '#ebf8ef', color: '#166534' };
+    case 'review':
+      return { background: '#fff4e5', color: '#b45309' };
+    case 'personal':
+      return { background: '#fdebf3', color: '#be185d' };
+    case 'vacation':
+      return { background: '#eef2ff', color: '#5b21b6' };
+    case 'visit':
+      return { background: '#ecfeff', color: '#0f766e' };
+    default:
+      return { background: '#f3f4f6', color: '#374151' };
+  }
+}
+
+const pageWrap: React.CSSProperties = {
   display: 'grid',
   gap: 16,
 };
@@ -576,144 +639,141 @@ const toolbar: React.CSSProperties = {
   flexWrap: 'wrap',
 };
 
-const toolbarLeft: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 12,
-};
-
-const toolbarRight: React.CSSProperties = {
+const monthNav: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 12,
   flexWrap: 'wrap',
 };
 
-const title: React.CSSProperties = {
+const monthTitle: React.CSSProperties = {
   margin: 0,
   fontSize: 24,
-  color: '#1f2340',
+  fontWeight: 800,
+  color: '#1f2937',
 };
 
-const button: React.CSSProperties = {
-  border: '1px solid rgba(99,102,241,0.16)',
+const navButton: React.CSSProperties = {
+  border: '1px solid rgba(0,0,0,0.12)',
+  background: '#ffffff',
   borderRadius: 12,
-  background: '#fff',
   padding: '10px 14px',
   cursor: 'pointer',
   fontWeight: 700,
 };
 
-const primaryButton: React.CSSProperties = {
+const subButton: React.CSSProperties = {
+  ...navButton,
+};
+
+const mainButton: React.CSSProperties = {
   border: 'none',
-  borderRadius: 12,
-  background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+  background: '#111827',
   color: '#fff',
+  borderRadius: 12,
   padding: '10px 16px',
   cursor: 'pointer',
   fontWeight: 800,
-  boxShadow: '0 8px 18px rgba(99, 102, 241, 0.22)',
 };
 
 const dangerButton: React.CSSProperties = {
   border: 'none',
-  borderRadius: 12,
-  background: 'linear-gradient(90deg, #ef4444, #dc2626)',
+  background: '#dc2626',
   color: '#fff',
+  borderRadius: 12,
   padding: '10px 16px',
   cursor: 'pointer',
   fontWeight: 800,
 };
 
 const errorBox: React.CSSProperties = {
-  color: '#b42318',
-  fontSize: 13,
-  lineHeight: 1.5,
-  background: '#FEF3F2',
-  border: '1px solid rgba(180,35,24,0.15)',
+  background: '#fef2f2',
+  color: '#b91c1c',
+  border: '1px solid #fecaca',
   borderRadius: 12,
   padding: '12px 14px',
+  fontWeight: 700,
 };
 
 const loadingBox: React.CSSProperties = {
-  background: '#fff',
-  borderRadius: 16,
-  padding: '20px',
+  background: '#ffffff',
+  borderRadius: 12,
+  padding: '18px',
+  border: '1px solid rgba(0,0,0,0.08)',
 };
 
-const calendarScrollWrap: React.CSSProperties = {
-  width: '100%',
-  overflowX: 'auto',
-  overflowY: 'auto',
-  WebkitOverflowScrolling: 'touch',
-};
-
-const calendarCard: React.CSSProperties = {
-  minWidth: 980,
-  background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
-  borderRadius: 24,
-  padding: 16,
-  boxShadow: '0 14px 30px rgba(91, 98, 133, 0.10)',
-};
-
-const grid: React.CSSProperties = {
+const calendarWrap: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(7, minmax(130px, 1fr))',
-  gap: 1,
-  background: 'rgba(99,102,241,0.08)',
+  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+  border: '1px solid rgba(0,0,0,0.08)',
   borderRadius: 16,
   overflow: 'hidden',
+  background: '#fff',
 };
 
 const dayHeader: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #eef6ff 0%, #dbeafe 100%)',
   padding: '12px 8px',
   textAlign: 'center',
   fontWeight: 800,
-  color: '#1d4ed8',
+  background: '#f8fafc',
+  borderBottom: '1px solid rgba(0,0,0,0.08)',
 };
 
 const sundayHeader: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
-  padding: '12px 8px',
-  textAlign: 'center',
-  fontWeight: 800,
   color: '#dc2626',
 };
 
 const saturdayHeader: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-  padding: '12px 8px',
-  textAlign: 'center',
-  fontWeight: 800,
   color: '#2563eb',
 };
 
-const cell: React.CSSProperties = {
-  minHeight: 130,
-  background: '#fff',
-  padding: 10,
+const dayCell: React.CSSProperties = {
+  minHeight: 150,
+  padding: 8,
+  borderRight: '1px solid rgba(0,0,0,0.08)',
+  borderBottom: '1px solid rgba(0,0,0,0.08)',
+  background: '#ffffff',
   display: 'grid',
-  gap: 8,
+  gridTemplateRows: 'auto auto auto 1fr',
+  gap: 6,
 };
 
 const sundayCell: React.CSSProperties = {
-  background: 'linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%)',
+  background: '#fff8f8',
 };
 
 const saturdayCell: React.CSSProperties = {
-  background: 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)',
+  background: '#f8fbff',
 };
 
-const cellHeader: React.CSSProperties = {
+const dayTopRow: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
+  gap: 6,
 };
 
-const dateStyle: React.CSSProperties = {
+const dayDateButton: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  padding: 0,
+  cursor: 'pointer',
+};
+
+const dayDateText: React.CSSProperties = {
+  display: 'inline-grid',
+  placeItems: 'center',
+  width: 28,
+  height: 28,
+  borderRadius: 999,
   fontWeight: 800,
-  color: '#5b6285',
+  fontSize: 14,
+  color: '#111827',
+};
+
+const todayDateBadge: React.CSSProperties = {
+  background: '#2563eb',
+  color: '#ffffff',
 };
 
 const sundayDateStyle: React.CSSProperties = {
@@ -724,176 +784,159 @@ const saturdayDateStyle: React.CSSProperties = {
   color: '#2563eb',
 };
 
-const todayDateStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 28,
-  height: 28,
-  borderRadius: '999px',
-  background: '#111827',
-  color: '#ffffff',
-  fontWeight: 800,
-};
-
-const miniButton: React.CSSProperties = {
-  border: 'none',
-  borderRadius: 10,
-  background: 'linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)',
-  color: '#166534',
-  width: 28,
-  height: 28,
+const addMiniButton: React.CSSProperties = {
+  border: '1px solid rgba(0,0,0,0.08)',
+  background: '#fff',
+  borderRadius: 999,
+  width: 26,
+  height: 26,
   cursor: 'pointer',
   fontWeight: 800,
 };
 
-const eventList: React.CSSProperties = {
+const weekdayRow: React.CSSProperties = {
+  minHeight: 16,
+};
+
+const weekdayText: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 700,
+  color: '#6b7280',
+};
+
+const holidayNameText: React.CSSProperties = {
+  fontSize: 11,
+  lineHeight: 1.3,
+  fontWeight: 800,
+  color: '#dc2626',
+  minHeight: 30,
+  wordBreak: 'break-word',
+};
+
+const holidaySpacer: React.CSSProperties = {
+  minHeight: 30,
+};
+
+const eventsArea: React.CSSProperties = {
   display: 'grid',
+  alignContent: 'start',
   gap: 6,
 };
 
-const eventItem: React.CSSProperties = {
+const eventChip: React.CSSProperties = {
   border: 'none',
-  borderRadius: 12,
-  background: 'linear-gradient(135deg, #eef2ff 0%, #e9d5ff 100%)',
-  color: '#312e81',
+  borderRadius: 10,
   padding: '8px 10px',
-  cursor: 'pointer',
   textAlign: 'left',
+  cursor: 'pointer',
   display: 'grid',
   gap: 2,
 };
 
 const eventTitle: React.CSSProperties = {
+  fontSize: 12,
   fontWeight: 800,
-  fontSize: 13,
+  lineHeight: 1.3,
 };
 
-const eventOwner: React.CSSProperties = {
-  fontSize: 11,
-  color: '#5b6285',
-  fontWeight: 700,
+const eventMeta: React.CSSProperties = {
+  fontSize: 10,
+  opacity: 0.8,
 };
 
 const overlay: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  background: 'rgba(15, 23, 42, 0.35)',
+  background: 'rgba(0,0,0,0.45)',
   display: 'grid',
   placeItems: 'center',
-  padding: 16,
-  zIndex: 50,
+  padding: 20,
+  zIndex: 1000,
 };
 
 const modal: React.CSSProperties = {
-  width: '100%',
-  maxWidth: 576,
-  background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
-  borderRadius: 19,
-  padding: 19,
-  boxShadow: '0 16px 32px rgba(15, 23, 42, 0.20)',
+  width: 'min(720px, 100%)',
+  background: '#fff',
+  borderRadius: 20,
+  padding: 20,
+  display: 'grid',
+  gap: 16,
+  boxShadow: '0 24px 60px rgba(0,0,0,0.2)',
 };
 
 const modalTitle: React.CSSProperties = {
-  margin: '0 0 13px',
-  fontSize: 19,
-  color: '#1f2340',
-};
-
-const formGrid: React.CSSProperties = {
-  display: 'grid',
-  gap: 11,
-};
-
-const label: React.CSSProperties = {
-  display: 'grid',
-  gap: 6,
-  fontWeight: 700,
-  color: '#394067',
-};
-
-const halfLabel: React.CSSProperties = {
-  display: 'grid',
-  gap: 6,
-  fontWeight: 700,
-  color: '#394067',
-  flex: 1,
-  minWidth: 0,
-};
-
-const dateTimeRow: React.CSSProperties = {
-  display: 'flex',
-  gap: 10,
-  flexWrap: 'wrap',
-};
-
-const dateInlineBox: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  width: '100%',
-  padding: '0 11px',
-  border: '1px solid #d8dcef',
-  borderRadius: 11,
-  boxSizing: 'border-box',
-  background: '#fff',
-  minHeight: 42,
-};
-
-const dateInlineInput: React.CSSProperties = {
-  flex: 1,
-  minWidth: 0,
-  border: 'none',
-  outline: 'none',
-  fontSize: 14,
-  background: 'transparent',
-  padding: '9px 0',
-  boxSizing: 'border-box',
-};
-
-const dateInlineWeekday: React.CSSProperties = {
-  fontSize: 12,
+  margin: 0,
+  fontSize: 22,
   fontWeight: 800,
-  color: '#5b6285',
-  whiteSpace: 'nowrap',
-  flexShrink: 0,
+};
+
+const field: React.CSSProperties = {
+  display: 'grid',
+  gap: 8,
+};
+
+const labelText: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: '#374151',
 };
 
 const input: React.CSSProperties = {
   width: '100%',
-  padding: '9px 11px',
-  border: '1px solid #d8dcef',
-  borderRadius: 11,
-  fontSize: 14,
   boxSizing: 'border-box',
+  border: '1px solid rgba(0,0,0,0.12)',
+  borderRadius: 12,
+  padding: '10px 12px',
+  fontSize: 14,
   background: '#fff',
-  minHeight: 42,
 };
 
 const textarea: React.CSSProperties = {
-  width: '100%',
-  minHeight: 80,
-  padding: '9px 11px',
-  border: '1px solid #d8dcef',
-  borderRadius: 11,
-  fontSize: 14,
-  boxSizing: 'border-box',
-  background: '#fff',
+  ...input,
   resize: 'vertical',
+  minHeight: 110,
 };
 
-const checkLabel: React.CSSProperties = {
+const checkRow: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 6,
+  gap: 12,
+};
+
+const checkboxLabel: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
   fontWeight: 700,
-  color: '#394067',
+};
+
+const dateTimeGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: 12,
+};
+
+const dateInlineWrap: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  flexWrap: 'wrap',
+};
+
+const dateInlineInput: React.CSSProperties = {
+  ...input,
+  width: 'auto',
+};
+
+const weekdayInlineText: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: '#6b7280',
 };
 
 const modalActions: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'flex-end',
-  gap: 8,
-  marginTop: 14,
+  gap: 10,
   flexWrap: 'wrap',
 };
