@@ -57,6 +57,7 @@ export default function CalendarWeekPage() {
     });
   }, [weekStart]);
 
+  const todayKey = formatDateParam(new Date());
   const weekLabel = `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}`;
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
@@ -267,6 +268,7 @@ export default function CalendarWeekPage() {
                 {weekDays.map((day) => {
                   const dayType = getDayType(day);
                   const holidayName = getHolidayName(day);
+                  const isToday = formatDateParam(day) === todayKey;
 
                   const headerStyle =
                     dayType === 'holiday' || dayType === 'sunday'
@@ -292,7 +294,14 @@ export default function CalendarWeekPage() {
                   return (
                     <div key={day.toISOString()} style={headerStyle}>
                       <div style={weekHeaderTop}>
-                        <div style={dateTextStyle}>{`${day.getMonth() + 1}/${day.getDate()}`}</div>
+                        <div
+                          style={{
+                            ...dateTextStyle,
+                            ...(isToday ? todayWeekDateStyle : {}),
+                          }}
+                        >
+                          {`${day.getMonth() + 1}/${day.getDate()}`}
+                        </div>
                         {holidayName ? <span style={weekHolidayInline}>{holidayName}</span> : null}
                       </div>
                       <div style={weekTextStyle}>{['日', '月', '火', '水', '木', '金', '土'][day.getDay()]}</div>
@@ -674,6 +683,12 @@ const dayDate: React.CSSProperties = {
   fontWeight: 800,
   color: '#1f2340',
   flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 28,
+  padding: '0 8px',
+  borderRadius: 999,
 };
 
 const dayWeek: React.CSSProperties = {
@@ -686,12 +701,30 @@ const sundayDateStyle: React.CSSProperties = {
   fontWeight: 800,
   color: '#dc2626',
   flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 28,
+  padding: '0 8px',
+  borderRadius: 999,
 };
 
 const saturdayDateStyle: React.CSSProperties = {
   fontWeight: 800,
   color: '#2563eb',
   flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 28,
+  padding: '0 8px',
+  borderRadius: 999,
+};
+
+const todayWeekDateStyle: React.CSSProperties = {
+  color: '#111827',
+  border: '2px solid #111827',
+  background: '#ffffff',
 };
 
 const weekHolidayInline: React.CSSProperties = {
