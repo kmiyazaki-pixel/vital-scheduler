@@ -302,22 +302,25 @@ export default function CalendarMonthPage() {
                       }}
                     >
                       <div style={cellHeader}>
-                        <span
-                          style={{
-                            ...dateStyle,
-                            ...holidayDateStyle,
-                            ...(isToday ? todayDateStyle : {}),
-                          }}
-                        >
-                          {date.getDate()}
-                        </span>
+                        <div style={dateInlineRow}>
+                          <span
+                            style={{
+                              ...dateStyle,
+                              ...holidayDateStyle,
+                              ...(isToday ? todayDateStyle : {}),
+                            }}
+                          >
+                            {date.getDate()}
+                          </span>
+                          {holidayName ? (
+                            <span style={holidayNameInline}>{holidayName}</span>
+                          ) : null}
+                        </div>
 
                         <button style={miniButton} onClick={() => openCreateModal(date)}>
                           ＋
                         </button>
                       </div>
-
-                      {holidayName ? <div style={holidayNameBadge}>{holidayName}</div> : null}
 
                       <div style={eventList}>
                         {dayEvents.map((e) => (
@@ -721,12 +724,22 @@ const todayCell: React.CSSProperties = {
 const cellHeader: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: 6,
+};
+
+const dateInlineRow: React.CSSProperties = {
+  display: 'flex',
   alignItems: 'center',
+  gap: 6,
+  minWidth: 0,
+  flexWrap: 'nowrap',
 };
 
 const dateStyle: React.CSSProperties = {
   fontWeight: 800,
   color: '#5b6285',
+  flexShrink: 0,
 };
 
 const sundayDateStyle: React.CSSProperties = {
@@ -741,16 +754,11 @@ const todayDateStyle: React.CSSProperties = {
   color: '#be185d',
 };
 
-const holidayNameBadge: React.CSSProperties = {
-  display: 'inline-block',
-  maxWidth: '100%',
+const holidayNameInline: React.CSSProperties = {
+  minWidth: 0,
   fontSize: 10,
   fontWeight: 800,
   color: '#b91c1c',
-  background: 'rgba(255,255,255,0.72)',
-  border: '1px solid rgba(220,38,38,0.16)',
-  borderRadius: 999,
-  padding: '2px 8px',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -765,6 +773,7 @@ const miniButton: React.CSSProperties = {
   height: 28,
   cursor: 'pointer',
   fontWeight: 800,
+  flexShrink: 0,
 };
 
 const eventList: React.CSSProperties = {
