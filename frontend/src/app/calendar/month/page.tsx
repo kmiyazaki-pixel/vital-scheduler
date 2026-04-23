@@ -8,7 +8,6 @@ import {
   updateEvent,
 } from '@/lib/scheduler-db';
 import { EventItem } from '@/lib/types';
-import { isHoliday } from 'holiday-jp-dayjs';
 import { useEffect, useMemo, useState } from 'react';
 
 type EventFormState = {
@@ -16,8 +15,10 @@ type EventFormState = {
   title: string;
   category: string;
   memo: string;
-  startAt: string;
-  endAt: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
   allDay: boolean;
 };
 
@@ -25,8 +26,10 @@ const EMPTY_FORM: EventFormState = {
   title: '',
   category: 'other',
   memo: '',
-  startAt: '',
-  endAt: '',
+  startDate: '',
+  startTime: '',
+  endDate: '',
+  endTime: '',
   allDay: false,
 };
 
@@ -107,26 +110,31 @@ export default function CalendarMonthPage() {
 
   const openCreateModal = (date?: Date) => {
     const baseDate = date ? new Date(date) : new Date(year, month, 1);
-    const start = toLocalDateTimeInput(baseDate, 9, 0);
-    const end = toLocalDateTimeInput(baseDate, 10, 0);
 
     setForm({
       ...EMPTY_FORM,
-      startAt: start,
-      endAt: end,
+      startDate: toDateInputValue(baseDate),
+      startTime: '09:00',
+      endDate: toDateInputValue(baseDate),
+      endTime: '10:00',
     });
     setError(null);
     setModalOpen(true);
   };
 
   const openEditModal = (event: (typeof normalizedEvents)[number]) => {
+    const start = new Date(event.startAt as string);
+    const end = new Date(event.endAt as string);
+
     setForm({
       id: event.id,
       title: event.title,
       category: event.category,
       memo: event.memo ?? '',
-      startAt: toInputValue(event.startAt as string),
-      endAt: toInputValue(event.endAt as string),
+      startDate: toDateInputValue(start),
+      startTime: toTimeInputValue(start),
+      endDate: toDateInputValue(end),
+      endTime: toTimeInputValue(end),
       allDay: Boolean(event.allDay),
     });
     setError(null);
@@ -142,8 +150,10 @@ export default function CalendarMonthPage() {
   const handleSave = async () => {
     const missing: string[] = [];
 
-    if (!form.startAt) missing.push('開始');
-    if (!form.endAt) missing.push('終了');
+    if (!form.startDate) missing.push('開始日');
+    if (!form.startTime && !form.allDay) missing.push('開始時刻');
+    if (!form.endDate) missing.push('終了日');
+    if (!form.endTime && !form.allDay) missing.push('終了時刻');
 
     if (missing.length > 0) {
       setError(`${missing.join('、')}は必須です`);
@@ -151,6 +161,18 @@ export default function CalendarMonthPage() {
     }
 
     const safeTitle = form.title.trim() || '新しい予定';
+
+    const startAt = form.allDay
+      ? `${form.startDate}T00:00`
+      : `${form.startDate}T${form.startTime}`;
+    const endAt = form.allDay
+      ? `${form.endDate}T23:59`
+      : `${form.endDate}T${form.endTime}`;
+
+    if (new Date(startAt).getTime() > new Date(endAt).getTime()) {
+      setError('終了は開始より後にしてください');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -161,8 +183,8 @@ export default function CalendarMonthPage() {
         title: safeTitle,
         category: form.category,
         memo: form.memo,
-        start_at: form.startAt,
-        end_at: form.endAt,
+        start_at: startAt,
+        end_at: endAt,
         is_all_day: form.allDay,
       };
 
@@ -230,48 +252,23 @@ export default function CalendarMonthPage() {
           <div style={calendarScrollWrap}>
             <div style={calendarCard}>
               <div style={grid}>
-                {['日', '月', '火', '水', '木', '金', '土'].map((d, index) => {
-                  const headerStyle =
-                    index === 0
-                      ? sundayHeader
-                      : index === 6
-                      ? saturdayHeader
-                      : dayHeader;
-
-                  return (
-                    <div key={d} style={headerStyle}>
-                      {d}
-                    </div>
-                  );
-                })}
+                {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
+                  <div key={d} style={dayHeader}>
+                    {d}
+                  </div>
+                ))}
 
                 {calendarDays.map((date) => {
                   const key = formatLocalDateKey(date);
                   const dayEvents = eventsByDate.get(key) ?? [];
                   const isCurrent = date.getMonth() === month;
                   const isToday = key === todayKey;
-                  const dayType = getDayType(date);
-
-                  const holidayCellStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayCell
-                      : dayType === 'saturday'
-                      ? saturdayCell
-                      : {};
-
-                  const holidayDateStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayDateStyle
-                      : dayType === 'saturday'
-                      ? saturdayDateStyle
-                      : {};
 
                   return (
                     <div
                       key={key}
                       style={{
                         ...cell,
-                        ...holidayCellStyle,
                         ...(isToday ? todayCell : {}),
                         opacity: isCurrent ? 1 : 0.45,
                       }}
@@ -280,7 +277,6 @@ export default function CalendarMonthPage() {
                         <span
                           style={{
                             ...dateStyle,
-                            ...holidayDateStyle,
                             ...(isToday ? todayDateStyle : {}),
                           }}
                         >
@@ -358,37 +354,73 @@ export default function CalendarMonthPage() {
                   </select>
                 </label>
 
-                <label style={label}>
-                  <span>開始</span>
-                  <input
-                    type="datetime-local"
-                    value={form.startAt}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        startAt: e.target.value,
-                      }))
-                    }
-                    style={input}
-                    disabled={saving}
-                  />
-                </label>
+                <div style={dateTimeRow}>
+                  <label style={halfLabel}>
+                    <span>開始日</span>
+                    <input
+                      type="date"
+                      value={form.startDate}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          startDate: e.target.value,
+                        }))
+                      }
+                      style={input}
+                      disabled={saving}
+                    />
+                  </label>
 
-                <label style={label}>
-                  <span>終了</span>
-                  <input
-                    type="datetime-local"
-                    value={form.endAt}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        endAt: e.target.value,
-                      }))
-                    }
-                    style={input}
-                    disabled={saving}
-                  />
-                </label>
+                  <label style={halfLabel}>
+                    <span>開始時刻</span>
+                    <input
+                      type="time"
+                      value={form.startTime}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          startTime: e.target.value,
+                        }))
+                      }
+                      style={input}
+                      disabled={saving || form.allDay}
+                    />
+                  </label>
+                </div>
+
+                <div style={dateTimeRow}>
+                  <label style={halfLabel}>
+                    <span>終了日</span>
+                    <input
+                      type="date"
+                      value={form.endDate}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          endDate: e.target.value,
+                        }))
+                      }
+                      style={input}
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label style={halfLabel}>
+                    <span>終了時刻</span>
+                    <input
+                      type="time"
+                      value={form.endTime}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          endTime: e.target.value,
+                        }))
+                      }
+                      style={input}
+                      disabled={saving || form.allDay}
+                    />
+                  </label>
+                </div>
 
                 <label style={checkLabel}>
                   <input
@@ -444,15 +476,6 @@ export default function CalendarMonthPage() {
   );
 }
 
-function getDayType(date: Date) {
-  const day = date.getDay();
-
-  if (isHoliday(date)) return 'holiday';
-  if (day === 0) return 'sunday';
-  if (day === 6) return 'saturday';
-  return 'weekday';
-}
-
 function formatDateParam(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -467,27 +490,17 @@ function formatLocalDateKey(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
-function toInputValue(iso: string) {
-  const date = new Date(iso);
+function toDateInputValue(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${y}-${m}-${d}T${hh}:${mm}`;
+  return `${y}-${m}-${d}`;
 }
 
-function toLocalDateTimeInput(date: Date, hour: number, minute: number) {
-  const d = new Date(date);
-  d.setHours(hour, minute, 0, 0);
-
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-
-  return `${y}-${m}-${day}T${hh}:${mm}`;
+function toTimeInputValue(date: Date) {
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
 }
 
 const wrap: React.CSSProperties = {
@@ -600,36 +613,12 @@ const dayHeader: React.CSSProperties = {
   color: '#1d4ed8',
 };
 
-const sundayHeader: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
-  padding: '12px 8px',
-  textAlign: 'center',
-  fontWeight: 800,
-  color: '#dc2626',
-};
-
-const saturdayHeader: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-  padding: '12px 8px',
-  textAlign: 'center',
-  fontWeight: 800,
-  color: '#2563eb',
-};
-
 const cell: React.CSSProperties = {
   minHeight: 130,
   background: '#fff',
   padding: 10,
   display: 'grid',
   gap: 8,
-};
-
-const sundayCell: React.CSSProperties = {
-  background: 'linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%)',
-};
-
-const saturdayCell: React.CSSProperties = {
-  background: 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)',
 };
 
 const todayCell: React.CSSProperties = {
@@ -645,14 +634,6 @@ const cellHeader: React.CSSProperties = {
 const dateStyle: React.CSSProperties = {
   fontWeight: 800,
   color: '#5b6285',
-};
-
-const sundayDateStyle: React.CSSProperties = {
-  color: '#dc2626',
-};
-
-const saturdayDateStyle: React.CSSProperties = {
-  color: '#2563eb',
 };
 
 const todayDateStyle: React.CSSProperties = {
@@ -733,6 +714,21 @@ const label: React.CSSProperties = {
   gap: 8,
   fontWeight: 700,
   color: '#394067',
+};
+
+const halfLabel: React.CSSProperties = {
+  display: 'grid',
+  gap: 8,
+  fontWeight: 700,
+  color: '#394067',
+  flex: 1,
+  minWidth: 0,
+};
+
+const dateTimeRow: React.CSSProperties = {
+  display: 'flex',
+  gap: 12,
+  flexWrap: 'wrap',
 };
 
 const input: React.CSSProperties = {
