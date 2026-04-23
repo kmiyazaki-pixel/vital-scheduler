@@ -271,22 +271,22 @@ export default function CalendarWeekPage() {
                     dayType === 'holiday' || dayType === 'sunday'
                       ? sundayHeader
                       : dayType === 'saturday'
-                      ? saturdayHeader
-                      : dayHeader;
+                        ? saturdayHeader
+                        : dayHeader;
 
                   const dateTextStyle =
                     dayType === 'holiday' || dayType === 'sunday'
                       ? sundayDateStyle
                       : dayType === 'saturday'
-                      ? saturdayDateStyle
-                      : dayDate;
+                        ? saturdayDateStyle
+                        : dayDate;
 
                   const weekTextStyle =
                     dayType === 'holiday' || dayType === 'sunday'
                       ? sundayWeekStyle
                       : dayType === 'saturday'
-                      ? saturdayWeekStyle
-                      : dayWeek;
+                        ? saturdayWeekStyle
+                        : dayWeek;
 
                   return (
                     <div key={day.toISOString()} style={headerStyle}>
@@ -308,8 +308,8 @@ export default function CalendarWeekPage() {
                         dayType === 'holiday' || dayType === 'sunday'
                           ? sundayCell
                           : dayType === 'saturday'
-                          ? saturdayCell
-                          : {};
+                            ? saturdayCell
+                            : {};
 
                       return (
                         <div key={key} style={{ ...cell, ...cellStyle }}>
@@ -381,13 +381,18 @@ export default function CalendarWeekPage() {
                 <div style={dateTimeRow}>
                   <label style={halfLabel}>
                     <span>開始日</span>
-                    <input
-                      type="date"
-                      value={form.startDate}
-                      onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                      style={input}
-                      disabled={saving}
-                    />
+                    <div style={dateFieldWrap}>
+                      <input
+                        type="date"
+                        value={form.startDate}
+                        onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                        style={input}
+                        disabled={saving}
+                      />
+                      {form.startDate ? (
+                        <span style={weekdayText}>{formatWeekdayJa(form.startDate)}</span>
+                      ) : null}
+                    </div>
                   </label>
 
                   <label style={halfLabel}>
@@ -405,13 +410,18 @@ export default function CalendarWeekPage() {
                 <div style={dateTimeRow}>
                   <label style={halfLabel}>
                     <span>終了日</span>
-                    <input
-                      type="date"
-                      value={form.endDate}
-                      onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                      style={input}
-                      disabled={saving}
-                    />
+                    <div style={dateFieldWrap}>
+                      <input
+                        type="date"
+                        value={form.endDate}
+                        onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                        style={input}
+                        disabled={saving}
+                      />
+                      {form.endDate ? (
+                        <span style={weekdayText}>{formatWeekdayJa(form.endDate)}</span>
+                      ) : null}
+                    </div>
                   </label>
 
                   <label style={halfLabel}>
@@ -507,6 +517,13 @@ function toTimeInputValue(date: Date) {
 function formatTime(iso: string) {
   const date = new Date(iso);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function formatWeekdayJa(date: string) {
+  const [year, month, day] = date.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  const weekdays = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+  return weekdays[d.getDay()];
 }
 
 const wrap: React.CSSProperties = {
@@ -793,6 +810,20 @@ const dateTimeRow: React.CSSProperties = {
   display: 'flex',
   gap: 12,
   flexWrap: 'wrap',
+};
+
+const dateFieldWrap: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  flexWrap: 'wrap',
+};
+
+const weekdayText: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: '#5b6285',
+  whiteSpace: 'nowrap',
 };
 
 const input: React.CSSProperties = {
