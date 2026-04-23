@@ -1,4 +1,4 @@
-'use client'; 
+'use client';
 
 import SchedulerShell from '@/components/SchedulerShell';
 import {
@@ -8,7 +8,7 @@ import {
   updateEvent,
 } from '@/lib/scheduler-db';
 import { EventItem } from '@/lib/types';
-import { isHoliday } from 'holiday-jp-dayjs';
+import { between, isHoliday } from 'holiday-jp-dayjs';
 import { useEffect, useMemo, useState } from 'react';
 
 type EventFormState = {
@@ -275,6 +275,7 @@ export default function CalendarMonthPage() {
                   const isCurrent = date.getMonth() === month;
                   const isToday = key === todayKey;
                   const dayType = getDayType(date);
+                  const holidayName = getHolidayName(date);
 
                   const holidayCellStyle =
                     dayType === 'holiday' || dayType === 'sunday'
@@ -296,6 +297,7 @@ export default function CalendarMonthPage() {
                       style={{
                         ...cell,
                         ...holidayCellStyle,
+                        ...(isToday ? todayCell : {}),
                         opacity: isCurrent ? 1 : 0.45,
                       }}
                     >
@@ -314,6 +316,8 @@ export default function CalendarMonthPage() {
                           ＋
                         </button>
                       </div>
+
+                      {holidayName ? <div style={holidayNameBadge}>{holidayName}</div> : null}
 
                       <div style={eventList}>
                         {dayEvents.map((e) => (
@@ -522,6 +526,11 @@ function getDayType(date: Date) {
   return 'weekday';
 }
 
+function getHolidayName(date: Date) {
+  const holidays = between(date, date);
+  return holidays.length > 0 ? holidays[0].name : '';
+}
+
 function buildLocalIso(date: string, time: string) {
   const [year, month, day] = date.split('-').map(Number);
   const [hour, minute] = time.split(':').map(Number);
@@ -705,6 +714,10 @@ const saturdayCell: React.CSSProperties = {
   background: 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)',
 };
 
+const todayCell: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #fff8fb 0%, #fdf2f8 100%)',
+};
+
 const cellHeader: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
@@ -725,15 +738,22 @@ const saturdayDateStyle: React.CSSProperties = {
 };
 
 const todayDateStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 28,
-  height: 28,
-  borderRadius: '999px',
-  background: '#111827',
-  color: '#ffffff',
+  color: '#be185d',
+};
+
+const holidayNameBadge: React.CSSProperties = {
+  display: 'inline-block',
+  maxWidth: '100%',
+  fontSize: 10,
   fontWeight: 800,
+  color: '#b91c1c',
+  background: 'rgba(255,255,255,0.72)',
+  border: '1px solid rgba(220,38,38,0.16)',
+  borderRadius: 999,
+  padding: '2px 8px',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
 
 const miniButton: React.CSSProperties = {
