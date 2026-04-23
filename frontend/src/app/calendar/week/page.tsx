@@ -59,6 +59,7 @@ export default function CalendarWeekPage() {
 
   const weekLabel = `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}`;
   const hours = Array.from({ length: 24 }, (_, i) => i);
+  const todayKey = formatLocalDateKey(new Date());
 
   const loadEvents = async (days: Date[]) => {
     try {
@@ -108,7 +109,7 @@ export default function CalendarWeekPage() {
 
     for (const e of normalizedEvents) {
       const start = new Date(e.startAt as string);
-      const key = `${start.toISOString().slice(0, 10)}-${start.getHours()}`;
+      const key = `${formatLocalDateKey(start)}-${start.getHours()}`;
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
@@ -266,6 +267,8 @@ export default function CalendarWeekPage() {
                 <div style={timeHeader} />
                 {weekDays.map((day) => {
                   const dayType = getDayType(day);
+                  const key = formatLocalDateKey(day);
+                  const isToday = key === todayKey;
 
                   const headerStyle =
                     dayType === 'holiday' || dayType === 'sunday'
@@ -290,7 +293,9 @@ export default function CalendarWeekPage() {
 
                   return (
                     <div key={day.toISOString()} style={headerStyle}>
-                      <div style={dateTextStyle}>{`${day.getMonth() + 1}/${day.getDate()}`}</div>
+                      <div style={{ ...dateTextStyle, ...(isToday ? todayHeaderDateStyle : {}) }}>
+                        {`${day.getMonth() + 1}/${day.getDate()}`}
+                      </div>
                       <div style={weekTextStyle}>{['日', '月', '火', '水', '木', '金', '土'][day.getDay()]}</div>
                     </div>
                   );
@@ -300,7 +305,7 @@ export default function CalendarWeekPage() {
                   <div key={hour} style={{ display: 'contents' }}>
                     <div style={timeCell}>{`${String(hour).padStart(2, '0')}:00`}</div>
                     {weekDays.map((day) => {
-                      const key = `${day.toISOString().slice(0, 10)}-${hour}`;
+                      const key = `${formatLocalDateKey(day)}-${hour}`;
                       const dayEvents = eventsByDayAndHour.get(key) ?? [];
                       const dayType = getDayType(day);
 
@@ -501,6 +506,13 @@ function formatDateParam(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
+function formatLocalDateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function toDateInputValue(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -684,6 +696,19 @@ const saturdayWeekStyle: React.CSSProperties = {
   fontSize: 12,
   color: '#2563eb',
   fontWeight: 700,
+};
+
+const todayHeaderDateStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: 32,
+  height: 32,
+  padding: '0 10px',
+  borderRadius: '999px',
+  background: '#111827',
+  color: '#ffffff',
+  fontWeight: 800,
 };
 
 const timeCell: React.CSSProperties = {
