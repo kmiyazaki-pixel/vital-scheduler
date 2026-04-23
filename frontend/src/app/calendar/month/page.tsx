@@ -296,7 +296,6 @@ export default function CalendarMonthPage() {
                       style={{
                         ...cell,
                         ...holidayCellStyle,
-                        ...(isToday ? todayCell : {}),
                         opacity: isCurrent ? 1 : 0.45,
                       }}
                     >
@@ -706,10 +705,6 @@ const saturdayCell: React.CSSProperties = {
   background: 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)',
 };
 
-const todayCell: React.CSSProperties = {
-  background: 'linear-gradient(180deg, #fff8fb 0%, #fdf2f8 100%)',
-};
-
 const cellHeader: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
@@ -730,7 +725,15 @@ const saturdayDateStyle: React.CSSProperties = {
 };
 
 const todayDateStyle: React.CSSProperties = {
-  color: '#be185d',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 28,
+  height: 28,
+  borderRadius: '999px',
+  background: '#111827',
+  color: '#ffffff',
+  fontWeight: 800,
 };
 
 const miniButton: React.CSSProperties = {
