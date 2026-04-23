@@ -740,6 +740,12 @@ const dateStyle: React.CSSProperties = {
   fontWeight: 800,
   color: '#5b6285',
   flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: 28,
+  height: 28,
+  borderRadius: 999,
 };
 
 const sundayDateStyle: React.CSSProperties = {
@@ -751,7 +757,9 @@ const saturdayDateStyle: React.CSSProperties = {
 };
 
 const todayDateStyle: React.CSSProperties = {
-  color: '#be185d',
+  color: '#111827',
+  border: '2px solid #111827',
+  background: '#ffffff',
 };
 
 const holidayNameInline: React.CSSProperties = {
