@@ -172,11 +172,12 @@ export default function CalendarWeekPage() {
     const safeTitle = form.title.trim() || '新しい予定';
 
     const startAt = form.allDay
-      ? `${form.startDate}T00:00`
-      : `${form.startDate}T${form.startTime}`;
+      ? buildLocalIso(form.startDate, '00:00')
+      : buildLocalIso(form.startDate, form.startTime);
+
     const endAt = form.allDay
-      ? `${form.endDate}T23:59`
-      : `${form.endDate}T${form.endTime}`;
+      ? buildLocalIso(form.endDate, '23:59')
+      : buildLocalIso(form.endDate, form.endTime);
 
     if (new Date(startAt).getTime() > new Date(endAt).getTime()) {
       setError('終了は開始より後にしてください');
@@ -427,6 +428,13 @@ export default function CalendarWeekPage() {
       </div>
     </SchedulerShell>
   );
+}
+
+function buildLocalIso(date: string, time: string) {
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  const localDate = new Date(year, month - 1, day, hour, minute, 0, 0);
+  return localDate.toISOString();
 }
 
 function formatDate(date: Date) {
