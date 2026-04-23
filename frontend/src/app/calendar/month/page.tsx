@@ -778,40 +778,40 @@ const overlay: React.CSSProperties = {
   background: 'rgba(15, 23, 42, 0.35)',
   display: 'grid',
   placeItems: 'center',
-  padding: 20,
+  padding: 16,
   zIndex: 50,
 };
 
 const modal: React.CSSProperties = {
   width: '100%',
-  maxWidth: 720,
+  maxWidth: 576,
   background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
-  borderRadius: 24,
-  padding: 24,
-  boxShadow: '0 20px 40px rgba(15, 23, 42, 0.20)',
+  borderRadius: 19,
+  padding: 19,
+  boxShadow: '0 16px 32px rgba(15, 23, 42, 0.20)',
 };
 
 const modalTitle: React.CSSProperties = {
-  margin: '0 0 16px',
-  fontSize: 24,
+  margin: '0 0 13px',
+  fontSize: 19,
   color: '#1f2340',
 };
 
 const formGrid: React.CSSProperties = {
   display: 'grid',
-  gap: 14,
+  gap: 11,
 };
 
 const label: React.CSSProperties = {
   display: 'grid',
-  gap: 8,
+  gap: 6,
   fontWeight: 700,
   color: '#394067',
 };
 
 const halfLabel: React.CSSProperties = {
   display: 'grid',
-  gap: 8,
+  gap: 6,
   fontWeight: 700,
   color: '#394067',
   flex: 1,
@@ -820,21 +820,21 @@ const halfLabel: React.CSSProperties = {
 
 const dateTimeRow: React.CSSProperties = {
   display: 'flex',
-  gap: 12,
+  gap: 10,
   flexWrap: 'wrap',
 };
 
 const dateInlineBox: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 10,
+  gap: 8,
   width: '100%',
-  padding: '0 14px',
+  padding: '0 11px',
   border: '1px solid #d8dcef',
-  borderRadius: 14,
+  borderRadius: 11,
   boxSizing: 'border-box',
   background: '#fff',
-  minHeight: 52,
+  minHeight: 42,
 };
 
 const dateInlineInput: React.CSSProperties = {
@@ -842,14 +842,14 @@ const dateInlineInput: React.CSSProperties = {
   minWidth: 0,
   border: 'none',
   outline: 'none',
-  fontSize: 16,
+  fontSize: 14,
   background: 'transparent',
-  padding: '12px 0',
+  padding: '9px 0',
   boxSizing: 'border-box',
 };
 
 const dateInlineWeekday: React.CSSProperties = {
-  fontSize: 14,
+  fontSize: 12,
   fontWeight: 800,
   color: '#5b6285',
   whiteSpace: 'nowrap',
@@ -858,21 +858,22 @@ const dateInlineWeekday: React.CSSProperties = {
 
 const input: React.CSSProperties = {
   width: '100%',
-  padding: '12px 14px',
+  padding: '9px 11px',
   border: '1px solid #d8dcef',
-  borderRadius: 14,
-  fontSize: 16,
+  borderRadius: 11,
+  fontSize: 14,
   boxSizing: 'border-box',
   background: '#fff',
+  minHeight: 42,
 };
 
 const textarea: React.CSSProperties = {
   width: '100%',
-  minHeight: 100,
-  padding: '12px 14px',
+  minHeight: 80,
+  padding: '9px 11px',
   border: '1px solid #d8dcef',
-  borderRadius: 14,
-  fontSize: 16,
+  borderRadius: 11,
+  fontSize: 14,
   boxSizing: 'border-box',
   background: '#fff',
   resize: 'vertical',
@@ -881,7 +882,7 @@ const textarea: React.CSSProperties = {
 const checkLabel: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 8,
+  gap: 6,
   fontWeight: 700,
   color: '#394067',
 };
@@ -889,7 +890,7 @@ const checkLabel: React.CSSProperties = {
 const modalActions: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'flex-end',
-  gap: 10,
-  marginTop: 18,
+  gap: 8,
+  marginTop: 14,
   flexWrap: 'wrap',
 };
