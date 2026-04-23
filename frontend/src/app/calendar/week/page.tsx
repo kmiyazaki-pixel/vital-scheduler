@@ -381,17 +381,17 @@ export default function CalendarWeekPage() {
                 <div style={dateTimeRow}>
                   <label style={halfLabel}>
                     <span>開始日</span>
-                    <div style={dateFieldWrap}>
+                    <div style={dateInlineBox}>
                       <input
                         type="date"
                         value={form.startDate}
                         onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                        style={input}
+                        style={dateInlineInput}
                         disabled={saving}
                       />
-                      {form.startDate ? (
-                        <span style={weekdayText}>{formatWeekdayJa(form.startDate)}</span>
-                      ) : null}
+                      <span style={dateInlineWeekday}>
+                        {form.startDate ? formatWeekdayJa(form.startDate) : ''}
+                      </span>
                     </div>
                   </label>
 
@@ -410,17 +410,17 @@ export default function CalendarWeekPage() {
                 <div style={dateTimeRow}>
                   <label style={halfLabel}>
                     <span>終了日</span>
-                    <div style={dateFieldWrap}>
+                    <div style={dateInlineBox}>
                       <input
                         type="date"
                         value={form.endDate}
                         onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                        style={input}
+                        style={dateInlineInput}
                         disabled={saving}
                       />
-                      {form.endDate ? (
-                        <span style={weekdayText}>{formatWeekdayJa(form.endDate)}</span>
-                      ) : null}
+                      <span style={dateInlineWeekday}>
+                        {form.endDate ? formatWeekdayJa(form.endDate) : ''}
+                      </span>
                     </div>
                   </label>
 
@@ -812,18 +812,36 @@ const dateTimeRow: React.CSSProperties = {
   flexWrap: 'wrap',
 };
 
-const dateFieldWrap: React.CSSProperties = {
+const dateInlineBox: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 10,
-  flexWrap: 'wrap',
+  width: '100%',
+  padding: '0 14px',
+  border: '1px solid #d8dcef',
+  borderRadius: 14,
+  boxSizing: 'border-box',
+  background: '#fff',
+  minHeight: 52,
 };
 
-const weekdayText: React.CSSProperties = {
+const dateInlineInput: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  border: 'none',
+  outline: 'none',
+  fontSize: 16,
+  background: 'transparent',
+  padding: '12px 0',
+  boxSizing: 'border-box',
+};
+
+const dateInlineWeekday: React.CSSProperties = {
   fontSize: 14,
   fontWeight: 800,
   color: '#5b6285',
   whiteSpace: 'nowrap',
+  flexShrink: 0,
 };
 
 const input: React.CSSProperties = {
