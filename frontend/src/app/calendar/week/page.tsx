@@ -3,7 +3,7 @@
 import SchedulerShell from '@/components/SchedulerShell';
 import { createEvent, deleteEvent, fetchEvents, updateEvent } from '@/lib/scheduler-db';
 import { EventItem } from '@/lib/types';
-import { isHoliday } from 'holiday-jp-dayjs';
+import { between, isHoliday } from 'holiday-jp-dayjs';
 import { useEffect, useMemo, useState } from 'react';
 
 type EventFormState = {
@@ -59,7 +59,6 @@ export default function CalendarWeekPage() {
 
   const weekLabel = `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}`;
   const hours = Array.from({ length: 24 }, (_, i) => i);
-  const todayKey = formatLocalDateKey(new Date());
 
   const loadEvents = async (days: Date[]) => {
     try {
@@ -109,7 +108,7 @@ export default function CalendarWeekPage() {
 
     for (const e of normalizedEvents) {
       const start = new Date(e.startAt as string);
-      const key = `${formatLocalDateKey(start)}-${start.getHours()}`;
+      const key = `${start.toISOString().slice(0, 10)}-${start.getHours()}`;
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
@@ -267,8 +266,7 @@ export default function CalendarWeekPage() {
                 <div style={timeHeader} />
                 {weekDays.map((day) => {
                   const dayType = getDayType(day);
-                  const key = formatLocalDateKey(day);
-                  const isToday = key === todayKey;
+                  const holidayName = getHolidayName(day);
 
                   const headerStyle =
                     dayType === 'holiday' || dayType === 'sunday'
@@ -293,8 +291,9 @@ export default function CalendarWeekPage() {
 
                   return (
                     <div key={day.toISOString()} style={headerStyle}>
-                      <div style={{ ...dateTextStyle, ...(isToday ? todayHeaderDateStyle : {}) }}>
-                        {`${day.getMonth() + 1}/${day.getDate()}`}
+                      <div style={weekHeaderTop}>
+                        <div style={dateTextStyle}>{`${day.getMonth() + 1}/${day.getDate()}`}</div>
+                        {holidayName ? <span style={weekHolidayInline}>{holidayName}</span> : null}
                       </div>
                       <div style={weekTextStyle}>{['日', '月', '火', '水', '木', '金', '土'][day.getDay()]}</div>
                     </div>
@@ -305,7 +304,7 @@ export default function CalendarWeekPage() {
                   <div key={hour} style={{ display: 'contents' }}>
                     <div style={timeCell}>{`${String(hour).padStart(2, '0')}:00`}</div>
                     {weekDays.map((day) => {
-                      const key = `${formatLocalDateKey(day)}-${hour}`;
+                      const key = `${day.toISOString().slice(0, 10)}-${hour}`;
                       const dayEvents = eventsByDayAndHour.get(key) ?? [];
                       const dayType = getDayType(day);
 
@@ -488,6 +487,11 @@ function getDayType(date: Date) {
   return 'weekday';
 }
 
+function getHolidayName(date: Date) {
+  const holidays = between(date, date);
+  return holidays.length > 0 ? holidays[0].name : '';
+}
+
 function buildLocalIso(date: string, time: string) {
   const [year, month, day] = date.split('-').map(Number);
   const [hour, minute] = time.split(':').map(Number);
@@ -500,13 +504,6 @@ function formatDate(date: Date) {
 }
 
 function formatDateParam(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function formatLocalDateKey(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
@@ -665,9 +662,18 @@ const saturdayHeader: React.CSSProperties = {
   textAlign: 'center',
 };
 
+const weekHeaderTop: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 4,
+  minWidth: 0,
+};
+
 const dayDate: React.CSSProperties = {
   fontWeight: 800,
   color: '#1f2340',
+  flexShrink: 0,
 };
 
 const dayWeek: React.CSSProperties = {
@@ -679,11 +685,23 @@ const dayWeek: React.CSSProperties = {
 const sundayDateStyle: React.CSSProperties = {
   fontWeight: 800,
   color: '#dc2626',
+  flexShrink: 0,
 };
 
 const saturdayDateStyle: React.CSSProperties = {
   fontWeight: 800,
   color: '#2563eb',
+  flexShrink: 0,
+};
+
+const weekHolidayInline: React.CSSProperties = {
+  minWidth: 0,
+  fontSize: 10,
+  fontWeight: 800,
+  color: '#b91c1c',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
 
 const sundayWeekStyle: React.CSSProperties = {
@@ -696,19 +714,6 @@ const saturdayWeekStyle: React.CSSProperties = {
   fontSize: 12,
   color: '#2563eb',
   fontWeight: 700,
-};
-
-const todayHeaderDateStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minWidth: 32,
-  height: 32,
-  padding: '0 10px',
-  borderRadius: '999px',
-  background: '#111827',
-  color: '#ffffff',
-  fontWeight: 800,
 };
 
 const timeCell: React.CSSProperties = {
