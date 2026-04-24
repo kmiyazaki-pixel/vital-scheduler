@@ -863,35 +863,33 @@ const dateTimeRow: React.CSSProperties = {
 };
 
 const dateInlineBox: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 5,
+  display: 'grid',
+  gap: 4,
   width: '100%',
-  padding: '0 8px',
+  padding: '6px 8px',
   border: '1px solid #d8dcef',
   borderRadius: 10,
   boxSizing: 'border-box',
   background: '#fff',
-  minHeight: 36,
+  minHeight: 56,
 };
 
 const dateInlineInput: React.CSSProperties = {
-  flex: 1,
+  width: '100%',
   minWidth: 0,
   border: 'none',
   outline: 'none',
   fontSize: 13,
   background: 'transparent',
-  padding: '7px 0',
+  padding: 0,
   boxSizing: 'border-box',
 };
 
 const dateInlineWeekday: React.CSSProperties = {
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 800,
   color: '#5b6285',
-  whiteSpace: 'nowrap',
-  flexShrink: 0,
+  lineHeight: 1,
 };
 
 const input: React.CSSProperties = {
