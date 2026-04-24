@@ -857,19 +857,19 @@ const modalTitle: React.CSSProperties = {
 
 const formGrid: React.CSSProperties = {
   display: 'grid',
-  gap: 11,
+  gap: 8,
 };
 
 const label: React.CSSProperties = {
   display: 'grid',
-  gap: 6,
+  gap: 4,
   fontWeight: 700,
   color: '#394067',
 };
 
 const halfLabel: React.CSSProperties = {
   display: 'grid',
-  gap: 6,
+  gap: 4,
   fontWeight: 700,
   color: '#394067',
   flex: 1,
@@ -878,7 +878,7 @@ const halfLabel: React.CSSProperties = {
 
 const dateTimeRow: React.CSSProperties = {
   display: 'flex',
-  gap: 10,
+  gap: 8,
   flexWrap: 'wrap',
 };
 
@@ -887,12 +887,12 @@ const dateInlineBox: React.CSSProperties = {
   alignItems: 'center',
   gap: 8,
   width: '100%',
-  padding: '0 11px',
+  padding: '0 10px',
   border: '1px solid #d8dcef',
-  borderRadius: 11,
+  borderRadius: 10,
   boxSizing: 'border-box',
   background: '#fff',
-  minHeight: 42,
+  minHeight: 36,
 };
 
 const dateInlineInput: React.CSSProperties = {
@@ -900,9 +900,9 @@ const dateInlineInput: React.CSSProperties = {
   minWidth: 0,
   border: 'none',
   outline: 'none',
-  fontSize: 14,
+  fontSize: 13,
   background: 'transparent',
-  padding: '9px 0',
+  padding: '7px 0',
   boxSizing: 'border-box',
 };
 
@@ -916,19 +916,19 @@ const dateInlineWeekday: React.CSSProperties = {
 
 const input: React.CSSProperties = {
   width: '100%',
-  padding: '9px 11px',
+  padding: '7px 10px',
   border: '1px solid #d8dcef',
-  borderRadius: 11,
-  fontSize: 14,
+  borderRadius: 10,
+  fontSize: 13,
   boxSizing: 'border-box',
   background: '#fff',
-  minHeight: 42,
+  minHeight: 36,
 };
 
 const textarea: React.CSSProperties = {
   width: '100%',
-  minHeight: 80,
-  padding: '9px 11px',
+  minHeight: 150,
+  padding: '10px 11px',
   border: '1px solid #d8dcef',
   borderRadius: 11,
   fontSize: 14,
@@ -940,7 +940,7 @@ const textarea: React.CSSProperties = {
 const checkLabel: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 6,
+  gap: 5,
   fontWeight: 700,
   color: '#394067',
 };
@@ -949,6 +949,6 @@ const modalActions: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'flex-end',
   gap: 8,
-  marginTop: 14,
+  marginTop: 10,
   flexWrap: 'wrap',
 };
