@@ -826,7 +826,7 @@ const overlay: React.CSSProperties = {
 
 const modal: React.CSSProperties = {
   width: '100%',
-  maxWidth: 620,
+  maxWidth: 560,
   background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
   borderRadius: 19,
   padding: 20,
@@ -857,14 +857,14 @@ const halfLabel: React.CSSProperties = {
   gap: 4,
   fontWeight: 700,
   color: '#394067',
-  width: 220,
+  width: 260,
   minWidth: 0,
 };
 
 const dateTimeRow: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '220px 220px',
-  gap: 14,
+  gridTemplateColumns: '260px 260px',
+  gap: 16,
   alignItems: 'start',
 };
 
@@ -913,7 +913,7 @@ const input: React.CSSProperties = {
 
 const textarea: React.CSSProperties = {
   width: '100%',
-  minHeight: 155,
+  minHeight: 150,
   padding: '10px 11px',
   border: '1px solid #d8dcef',
   borderRadius: 11,
