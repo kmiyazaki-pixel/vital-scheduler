@@ -867,11 +867,12 @@ const dateTimeRow: React.CSSProperties = {
 };
 
 const dateInlineBox: React.CSSProperties = {
-  display: 'flex',
+  display: 'inline-flex',
   alignItems: 'center',
-  gap: 8,
-  width: '100%',
-  padding: '0 10px',
+  gap: 4,
+  width: 'fit-content',
+  maxWidth: '100%',
+  padding: '0 8px',
   border: '1px solid #d8dcef',
   borderRadius: 10,
   boxSizing: 'border-box',
@@ -880,8 +881,7 @@ const dateInlineBox: React.CSSProperties = {
 };
 
 const dateInlineInput: React.CSSProperties = {
-  flex: 1,
-  minWidth: 0,
+  width: 118,
   border: 'none',
   outline: 'none',
   fontSize: 13,
