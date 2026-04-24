@@ -94,6 +94,10 @@ export default function CalendarWeekPage() {
     setCurrentDate(d);
   };
 
+  const goToday = () => {
+    setCurrentDate(new Date());
+  };
+
   const normalizedEvents = useMemo(() => {
     return events.map((e) => ({
       ...e,
@@ -246,6 +250,9 @@ export default function CalendarWeekPage() {
             <h2 style={title}>{weekLabel}</h2>
             <button style={button} onClick={nextWeek}>
               次週
+            </button>
+            <button style={button} onClick={goToday}>
+              今日
             </button>
           </div>
 
