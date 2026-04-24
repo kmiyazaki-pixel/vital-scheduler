@@ -857,7 +857,7 @@ const halfLabel: React.CSSProperties = {
 
 const dateTimeRow: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '260px 260px',
+  gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)',
   gap: 16,
   alignItems: 'start',
 };
