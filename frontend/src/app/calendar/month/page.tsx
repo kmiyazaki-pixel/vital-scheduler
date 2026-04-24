@@ -833,6 +833,13 @@ const modal: React.CSSProperties = {
   boxShadow: '0 16px 32px rgba(15, 23, 42, 0.20)',
 };
 
+const modalTitle: React.CSSProperties = {
+  margin: '0 0 12px 0',
+  fontSize: 18,
+  fontWeight: 800,
+  color: '#2d3355',
+};
+
 const formGrid: React.CSSProperties = {
   display: 'grid',
   gap: 9,
