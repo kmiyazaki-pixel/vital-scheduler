@@ -826,22 +826,16 @@ const overlay: React.CSSProperties = {
 
 const modal: React.CSSProperties = {
   width: '100%',
-  maxWidth: 576,
+  maxWidth: 620,
   background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
   borderRadius: 19,
-  padding: 19,
+  padding: 20,
   boxShadow: '0 16px 32px rgba(15, 23, 42, 0.20)',
-};
-
-const modalTitle: React.CSSProperties = {
-  margin: '0 0 13px',
-  fontSize: 19,
-  color: '#1f2340',
 };
 
 const formGrid: React.CSSProperties = {
   display: 'grid',
-  gap: 8,
+  gap: 9,
 };
 
 const label: React.CSSProperties = {
@@ -856,22 +850,22 @@ const halfLabel: React.CSSProperties = {
   gap: 4,
   fontWeight: 700,
   color: '#394067',
-  flex: 1,
+  width: 220,
   minWidth: 0,
 };
 
 const dateTimeRow: React.CSSProperties = {
-  display: 'flex',
-  gap: 8,
-  flexWrap: 'wrap',
+  display: 'grid',
+  gridTemplateColumns: '220px 220px',
+  gap: 14,
+  alignItems: 'start',
 };
 
 const dateInlineBox: React.CSSProperties = {
-  display: 'inline-flex',
+  display: 'flex',
   alignItems: 'center',
-  gap: 4,
-  width: 'fit-content',
-  maxWidth: '100%',
+  gap: 5,
+  width: '100%',
   padding: '0 8px',
   border: '1px solid #d8dcef',
   borderRadius: 10,
@@ -881,7 +875,8 @@ const dateInlineBox: React.CSSProperties = {
 };
 
 const dateInlineInput: React.CSSProperties = {
-  width: 118,
+  flex: 1,
+  minWidth: 0,
   border: 'none',
   outline: 'none',
   fontSize: 13,
@@ -911,7 +906,7 @@ const input: React.CSSProperties = {
 
 const textarea: React.CSSProperties = {
   width: '100%',
-  minHeight: 150,
+  minHeight: 155,
   padding: '10px 11px',
   border: '1px solid #d8dcef',
   borderRadius: 11,
