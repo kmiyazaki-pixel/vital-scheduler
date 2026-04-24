@@ -297,7 +297,6 @@ export default function CalendarMonthPage() {
                       style={{
                         ...cell,
                         ...holidayCellStyle,
-                        ...(isToday ? todayCell : {}),
                         opacity: isCurrent ? 1 : 0.45,
                       }}
                     >
@@ -715,10 +714,6 @@ const sundayCell: React.CSSProperties = {
 
 const saturdayCell: React.CSSProperties = {
   background: 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)',
-};
-
-const todayCell: React.CSSProperties = {
-  background: 'linear-gradient(180deg, #fff8fb 0%, #fdf2f8 100%)',
 };
 
 const cellHeader: React.CSSProperties = {
