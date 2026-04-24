@@ -86,6 +86,10 @@ export default function CalendarMonthPage() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
+  const goToday = () => {
+    setCurrentDate(new Date());
+  };
+
   const normalizedEvents = useMemo(() => {
     return events.map((e) => ({
       ...e,
@@ -236,6 +240,9 @@ export default function CalendarMonthPage() {
             <h2 style={title}>{monthLabel}</h2>
             <button style={button} onClick={nextMonth}>
               次月
+            </button>
+            <button style={button} onClick={goToday}>
+              今日
             </button>
           </div>
 
