@@ -876,13 +876,8 @@ const dateInlineBox: React.CSSProperties = {
 
 const dateInlineInput: React.CSSProperties = {
   width: '100%',
-  minWidth: 140,
-  border: 'none',
-  outline: 'none',
-  fontSize: 13,
-  background: 'transparent',
-  padding: 0,
-  boxSizing: 'border-box',
+  minWidth: 150,
+  maxWidth: '100%',
   flexShrink: 0,
 };
 
