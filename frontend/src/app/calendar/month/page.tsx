@@ -880,6 +880,7 @@ const dateInlineInput: React.CSSProperties = {
   minWidth: 150,
   maxWidth: '100%',
   flexShrink: 0,
+  fontFamily: 'system-ui, sans-serif',
 };
 
 const dateInlineWeekday: React.CSSProperties = {
