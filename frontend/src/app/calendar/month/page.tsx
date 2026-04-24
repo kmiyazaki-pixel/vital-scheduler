@@ -872,6 +872,7 @@ const dateInlineBox: React.CSSProperties = {
   boxSizing: 'border-box',
   background: '#fff',
   minHeight: 56,
+  overflow: 'hidden',
 };
 
 const dateInlineInput: React.CSSProperties = {
