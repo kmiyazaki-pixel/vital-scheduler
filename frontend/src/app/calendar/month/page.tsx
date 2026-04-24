@@ -876,13 +876,14 @@ const dateInlineBox: React.CSSProperties = {
 
 const dateInlineInput: React.CSSProperties = {
   width: '100%',
-  minWidth: 0,
+  minWidth: 140,
   border: 'none',
   outline: 'none',
   fontSize: 13,
   background: 'transparent',
   padding: 0,
   boxSizing: 'border-box',
+  flexShrink: 0,
 };
 
 const dateInlineWeekday: React.CSSProperties = {
@@ -890,6 +891,7 @@ const dateInlineWeekday: React.CSSProperties = {
   fontWeight: 800,
   color: '#5b6285',
   lineHeight: 1,
+  whiteSpace: 'nowrap',
 };
 
 const input: React.CSSProperties = {
