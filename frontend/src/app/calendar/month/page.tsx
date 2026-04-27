@@ -410,6 +410,9 @@ export default function CalendarMonthPage() {
                         style={dateInlineInput}
                         disabled={saving}
                       />
+                      <span style={dateInlineWeekday}>
+　　　　                 {form.startDate ? formatWeekdayJa(form.startDate) : ''}
+                    </span>
                     </div>
                   </label>
 
@@ -445,7 +448,10 @@ export default function CalendarMonthPage() {
                         }
                         style={dateInlineInput}
                         disabled={saving}
-                      />                      
+                      />   
+                       <span style={dateInlineWeekday}>
+                           {form.endDate ? formatWeekdayJa(form.endDate) : ''}
+                    </span>
                     </div>
                   </label>
 
