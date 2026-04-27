@@ -857,28 +857,28 @@ const halfLabel: React.CSSProperties = {
   gap: 4,
   fontWeight: 700,
   color: '#394067',
-  width: 260,
+  flex: 1,
   minWidth: 0,
 };
 
 const dateTimeRow: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)',
-  gap: 16,
-  alignItems: 'start',
+  display: 'flex',
+  gap: 8,
+  flexWrap: 'wrap',
 };
 
 const dateInlineBox: React.CSSProperties = {
-  display: 'grid',
+  display: 'inline-flex',
+  alignItems: 'center',
   gap: 4,
-  width: '100%',
-  padding: '6px 8px',
+  width: 'fit-content',
+  maxWidth: '100%',
+  padding: '0 8px',
   border: '1px solid #d8dcef',
   borderRadius: 10,
   boxSizing: 'border-box',
   background: '#fff',
-  minHeight: 56,
-  overflow: 'hidden',
+  minHeight: 36,
 };
 
 const dateInlineInput: React.CSSProperties = {
