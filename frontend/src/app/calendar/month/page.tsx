@@ -411,8 +411,8 @@ export default function CalendarMonthPage() {
                         disabled={saving}
                       />
                       <span style={dateInlineWeekday}>
-　　　　                 {form.startDate ? formatWeekdayJa(form.startDate) : ''}
-                    </span>
+                        {form.startDate ? formatWeekdayJa(form.startDate) : ''}
+                      </span>
                     </div>
                   </label>
 
