@@ -26,6 +26,7 @@ export default function CalendarMonthPage() {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EventFormState>(EMPTY_FORM);
+  const [expandedDateKeys, setExpandedDateKeys] = useState<Set<string>>(new Set());
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -62,6 +63,7 @@ export default function CalendarMonthPage() {
   };
 
   useEffect(() => {
+    setExpandedDateKeys(new Set());
     loadEvents(year, month);
   }, [year, month]);
 
@@ -207,6 +209,20 @@ export default function CalendarMonthPage() {
     }
   };
 
+  const toggleExpandedDate = (key: string) => {
+    setExpandedDateKeys((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+
+      return next;
+    });
+  };
+
   return (
     <SchedulerShell title="月表示">
       <div style={wrap}>
@@ -262,6 +278,10 @@ export default function CalendarMonthPage() {
                   const dayType = getDayType(date);
                   const holidayName = getHolidayName(date);
 
+                  const expanded = expandedDateKeys.has(key);
+                  const visibleEvents = expanded ? dayEvents : dayEvents.slice(0, 3);
+                  const hiddenCount = Math.max(dayEvents.length - 3, 0);
+
                   const holidayCellStyle =
                     dayType === 'holiday' || dayType === 'sunday'
                       ? sundayCell
@@ -307,7 +327,7 @@ export default function CalendarMonthPage() {
                       </div>
 
                       <div style={eventList}>
-                        {dayEvents.map((e) => (
+                        {visibleEvents.map((e) => (
                           <button
                             key={e.id}
                             style={eventItem}
@@ -326,6 +346,12 @@ export default function CalendarMonthPage() {
                             ) : null}
                           </button>
                         ))}
+
+                        {hiddenCount > 0 && (
+                          <button style={moreButton} onClick={() => toggleExpandedDate(key)}>
+                            {expanded ? '閉じる' : `+${hiddenCount}`}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -518,7 +544,8 @@ const cell: React.CSSProperties = {
   background: '#fff',
   padding: 10,
   display: 'grid',
-  gap: 8,
+  alignContent: 'start',
+  gap: 6,
 };
 
 const sundayCell: React.CSSProperties = {
@@ -594,38 +621,40 @@ const miniButton: React.CSSProperties = {
 
 const eventList: React.CSSProperties = {
   display: 'grid',
-  gap: 6,
+  gap: 4,
 };
 
 const eventItem: React.CSSProperties = {
   border: 'none',
-  borderRadius: 12,
+  borderRadius: 8,
   background: 'linear-gradient(135deg, #eef2ff 0%, #e9d5ff 100%)',
   color: '#312e81',
-  padding: '8px 10px',
+  padding: '4px 7px',
   cursor: 'pointer',
   textAlign: 'left',
   display: 'grid',
-  gap: 2,
+  gap: 1,
+  minHeight: 34,
 };
 
 const eventTitleRow: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  gap: 8,
+  gap: 6,
+  minWidth: 0,
 };
 
 const eventTitle: React.CSSProperties = {
   fontWeight: 800,
-  fontSize: 13,
+  fontSize: 12,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 };
 
 const eventStartTime: React.CSSProperties = {
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 900,
   color: '#5b6285',
   whiteSpace: 'nowrap',
@@ -633,7 +662,23 @@ const eventStartTime: React.CSSProperties = {
 };
 
 const eventOwner: React.CSSProperties = {
-  fontSize: 11,
+  fontSize: 10,
   color: '#5b6285',
   fontWeight: 700,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const moreButton: React.CSSProperties = {
+  justifySelf: 'end',
+  border: 'none',
+  borderRadius: 8,
+  background: '#ffffff',
+  color: '#1f2340',
+  padding: '3px 7px',
+  cursor: 'pointer',
+  fontSize: 11,
+  fontWeight: 900,
+  boxShadow: '0 3px 8px rgba(15, 23, 42, 0.12)',
 };
