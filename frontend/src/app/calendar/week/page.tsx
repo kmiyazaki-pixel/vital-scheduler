@@ -1,33 +1,20 @@
 'use client';
 
+import EventFormModal, {
+  EMPTY_FORM,
+  EventFormState,
+  buildFormFromEvent,
+} from '@/components/EventFormModal';
 import SchedulerShell from '@/components/SchedulerShell';
-import { createEvent, deleteEvent, fetchEvents, updateEvent } from '@/lib/scheduler-db';
+import {
+  createEvent,
+  deleteEvent,
+  fetchEvents,
+  updateEvent,
+} from '@/lib/scheduler-db';
 import { EventItem } from '@/lib/types';
 import { between, isHoliday } from 'holiday-jp-dayjs';
 import { useEffect, useMemo, useState } from 'react';
-
-type EventFormState = {
-  id?: number;
-  title: string;
-  category: string;
-  memo: string;
-  startDate: string;
-  startTime: string;
-  endDate: string;
-  endTime: string;
-  allDay: boolean;
-};
-
-const EMPTY_FORM: EventFormState = {
-  title: '',
-  category: 'other',
-  memo: '',
-  startDate: '',
-  startTime: '',
-  endDate: '',
-  endTime: '',
-  allDay: false,
-};
 
 const FIXED_CALENDAR_ID = 1;
 
@@ -40,36 +27,34 @@ export default function CalendarWeekPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EventFormState>(EMPTY_FORM);
 
-  const weekStart = useMemo(() => {
-    const d = new Date(currentDate);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + diff);
-    return d;
-  }, [currentDate]);
+  const todayKey = formatLocalDateKey(new Date());
 
   const weekDays = useMemo(() => {
+    const base = new Date(currentDate);
+    const day = base.getDay();
+    const sunday = new Date(base);
+    sunday.setDate(base.getDate() - day);
+
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(weekStart);
-      d.setDate(weekStart.getDate() + i);
+      const d = new Date(sunday);
+      d.setDate(sunday.getDate() + i);
       return d;
     });
-  }, [weekStart]);
+  }, [currentDate]);
 
-  const todayKey = formatDateParam(new Date());
-  const weekLabel = `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}`;
-  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const weekLabel = `${formatDateLabel(weekDays[0])} - ${formatDateLabel(weekDays[6])}`;
 
-  const loadEvents = async (days: Date[]) => {
+  const loadEvents = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const from = formatDateParam(days[0]);
-      const to = formatDateParam(days[6]);
-      const data = await fetchEvents(FIXED_CALENDAR_ID, from, to);
+      const from = formatDateParam(weekDays[0]);
+      const toDate = new Date(weekDays[6]);
+      toDate.setDate(toDate.getDate() + 1);
+      const to = formatDateParam(toDate);
 
+      const data = await fetchEvents(FIXED_CALENDAR_ID, from, to);
       setEvents(data as EventItem[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定取得に失敗しました');
@@ -79,7 +64,7 @@ export default function CalendarWeekPage() {
   };
 
   useEffect(() => {
-    loadEvents(weekDays);
+    loadEvents();
   }, [weekDays]);
 
   const prevWeek = () => {
@@ -108,50 +93,44 @@ export default function CalendarWeekPage() {
     }));
   }, [events]);
 
-  const eventsByDayAndHour = useMemo(() => {
+  const eventsByDate = useMemo(() => {
     const map = new Map<string, typeof normalizedEvents>();
 
     for (const e of normalizedEvents) {
-      const start = new Date(e.startAt as string);
-      const key = `${start.toISOString().slice(0, 10)}-${start.getHours()}`;
+      const key = formatLocalDateKey(new Date(e.startAt as string));
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
     }
 
+    for (const list of map.values()) {
+      list.sort((a, b) => {
+        return (
+          new Date(a.startAt as string).getTime() -
+          new Date(b.startAt as string).getTime()
+        );
+      });
+    }
+
     return map;
   }, [normalizedEvents]);
 
-  const openCreateModal = (date?: Date, hour?: number) => {
-    const baseDate = date ? new Date(date) : new Date(weekDays[0]);
-    const baseHour = typeof hour === 'number' ? hour : 9;
+  const openCreateModal = (date?: Date) => {
+    const baseDate = date ? new Date(date) : new Date();
 
     setForm({
       ...EMPTY_FORM,
       startDate: toDateInputValue(baseDate),
-      startTime: `${String(baseHour).padStart(2, '0')}:00`,
+      startTime: '09:00',
       endDate: toDateInputValue(baseDate),
-      endTime: `${String(Math.min(baseHour + 1, 23)).padStart(2, '0')}:00`,
+      endTime: '10:00',
     });
     setError(null);
     setModalOpen(true);
   };
 
   const openEditModal = (event: (typeof normalizedEvents)[number]) => {
-    const start = new Date(event.startAt as string);
-    const end = new Date(event.endAt as string);
-
-    setForm({
-      id: event.id,
-      title: event.title,
-      category: event.category,
-      memo: event.memo ?? '',
-      startDate: toDateInputValue(start),
-      startTime: toTimeInputValue(start),
-      endDate: toDateInputValue(end),
-      endTime: toTimeInputValue(end),
-      allDay: Boolean(event.allDay),
-    });
+    setForm(buildFormFromEvent(event));
     setError(null);
     setModalOpen(true);
   };
@@ -212,7 +191,7 @@ export default function CalendarWeekPage() {
 
       setModalOpen(false);
       setForm(EMPTY_FORM);
-      await loadEvents(weekDays);
+      await loadEvents();
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定保存に失敗しました');
     } finally {
@@ -231,7 +210,7 @@ export default function CalendarWeekPage() {
 
       setModalOpen(false);
       setForm(EMPTY_FORM);
-      await loadEvents(weekDays);
+      await loadEvents();
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定削除に失敗しました');
     } finally {
@@ -269,13 +248,14 @@ export default function CalendarWeekPage() {
 
         {!loading && (
           <div style={weekScrollWrap}>
-            <div style={calendarCard}>
-              <div style={grid}>
-                <div style={timeHeader} />
-                {weekDays.map((day) => {
-                  const dayType = getDayType(day);
-                  const holidayName = getHolidayName(day);
-                  const isToday = formatDateParam(day) === todayKey;
+            <div style={weekCard}>
+              <div style={weekGrid}>
+                {weekDays.map((date) => {
+                  const key = formatLocalDateKey(date);
+                  const dayEvents = eventsByDate.get(key) ?? [];
+                  const dayType = getDayType(date);
+                  const holidayName = getHolidayName(date);
+                  const isToday = key === todayKey;
 
                   const headerStyle =
                     dayType === 'holiday' || dayType === 'sunday'
@@ -284,211 +264,89 @@ export default function CalendarWeekPage() {
                         ? saturdayHeader
                         : dayHeader;
 
+                  const dayCardStyle =
+                    dayType === 'holiday' || dayType === 'sunday'
+                      ? sundayDayCard
+                      : dayType === 'saturday'
+                        ? saturdayDayCard
+                        : dayCard;
+
                   const dateTextStyle =
                     dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayDateStyle
+                      ? sundayDateText
                       : dayType === 'saturday'
-                        ? saturdayDateStyle
-                        : dayDate;
-
-                  const weekTextStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayWeekStyle
-                      : dayType === 'saturday'
-                        ? saturdayWeekStyle
-                        : dayWeek;
+                        ? saturdayDateText
+                        : normalDateText;
 
                   return (
-                    <div key={day.toISOString()} style={headerStyle}>
-                      <div style={weekHeaderTop}>
-                        <div
-                          style={{
-                            ...dateTextStyle,
-                            ...(isToday ? todayWeekDateStyle : {}),
-                          }}
-                        >
-                          {`${day.getMonth() + 1}/${day.getDate()}`}
+                    <div key={key} style={dayColumn}>
+                      <div style={headerStyle}>
+                        <div style={weekdayText}>{formatWeekdayShort(date)}</div>
+                        <div style={dateRow}>
+                          <span
+                            style={{
+                              ...dateTextStyle,
+                              ...(isToday ? todayDateText : {}),
+                            }}
+                          >
+                            {date.getMonth() + 1}/{date.getDate()}
+                          </span>
+
+                          {holidayName ? (
+                            <span style={holidayNameStyle}>{holidayName}</span>
+                          ) : null}
                         </div>
-                        {holidayName ? <span style={weekHolidayInline}>{holidayName}</span> : null}
                       </div>
-                      <div style={weekTextStyle}>{['日', '月', '火', '水', '木', '金', '土'][day.getDay()]}</div>
+
+                      <div style={dayCardStyle}>
+                        <button style={addButton} onClick={() => openCreateModal(date)}>
+                          ＋ この日に予定を追加
+                        </button>
+
+                        <div style={eventList}>
+                          {dayEvents.length === 0 ? (
+                            <div style={emptyText}>予定なし</div>
+                          ) : (
+                            dayEvents.map((e) => (
+                              <button
+                                key={e.id}
+                                style={eventItem}
+                                onClick={() => openEditModal(e)}
+                                title={e.title}
+                              >
+                                <div style={eventTime}>
+                                  {e.allDay
+                                    ? '終日'
+                                    : `${formatTime(new Date(e.startAt as string))} - ${formatTime(
+                                        new Date(e.endAt as string),
+                                      )}`}
+                                </div>
+                                <div style={eventTitle}>{e.title}</div>
+                                {e.owner_name ? (
+                                  <div style={eventOwner}>担当: {e.owner_name}</div>
+                                ) : null}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
-
-                {hours.map((hour) => (
-                  <div key={hour} style={{ display: 'contents' }}>
-                    <div style={timeCell}>{`${String(hour).padStart(2, '0')}:00`}</div>
-                    {weekDays.map((day) => {
-                      const key = `${day.toISOString().slice(0, 10)}-${hour}`;
-                      const dayEvents = eventsByDayAndHour.get(key) ?? [];
-                      const dayType = getDayType(day);
-
-                      const cellStyle =
-                        dayType === 'holiday' || dayType === 'sunday'
-                          ? sundayCell
-                          : dayType === 'saturday'
-                            ? saturdayCell
-                            : {};
-
-                      return (
-                        <div key={key} style={{ ...cell, ...cellStyle }}>
-                          <div style={cellTop}>
-                            <button style={miniButton} onClick={() => openCreateModal(day, hour)}>
-                              ＋
-                            </button>
-                          </div>
-
-                          {dayEvents.map((event) => (
-                            <button
-                              key={event.id}
-                              style={eventItem}
-                              onClick={() => openEditModal(event)}
-                              title={event.title}
-                            >
-                              <div style={eventTitle}>{event.title}</div>
-                              <div style={eventTime}>
-                                {formatTime(event.startAt as string)} - {formatTime(event.endAt as string)}
-                              </div>
-                              {event.owner_name ? <div style={eventOwner}>担当: {event.owner_name}</div> : null}
-                            </button>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
               </div>
             </div>
           </div>
         )}
 
-        {modalOpen && (
-          <div style={overlay}>
-            <div style={modal}>
-              <h3 style={modalTitle}>{form.id ? '予定を編集' : '予定を追加'}</h3>
-
-              <div style={formGrid}>
-                <label style={label}>
-                  タイトル
-                  <input
-                    value={form.title}
-                    onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                    placeholder="未入力なら「新しい予定」で保存されます"
-                    style={input}
-                    disabled={saving}
-                  />
-                </label>
-
-                <label style={label}>
-                  区分
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
-                    style={input}
-                    disabled={saving}
-                  >
-                    <option value="other">その他</option>
-                    <option value="meeting">会議</option>
-                    <option value="work">業務</option>
-                    <option value="review">レビュー</option>
-                    <option value="personal">個人</option>
-                    <option value="holiday">休暇</option>
-                    <option value="visit">訪問</option>
-                  </select>
-                </label>
-
-                <div style={dateTimeRow}>
-                  <label style={halfLabel}>
-                    <span>開始日</span>
-                    <div style={dateInlineBox}>
-                      <input
-                        type="date"
-                        value={form.startDate}
-                        onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                        style={dateInlineInput}
-                        disabled={saving}
-                      />
-                      <span style={dateInlineWeekday}>
-                        {form.startDate ? formatWeekdayJa(form.startDate) : ''}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label style={halfLabel}>
-                    <span>開始時刻</span>
-                    <input
-                      type="time"
-                      value={form.startTime}
-                      onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))}
-                      style={input}
-                      disabled={saving || form.allDay}
-                    />
-                  </label>
-                </div>
-
-                <div style={dateTimeRow}>
-                  <label style={halfLabel}>
-                    <span>終了日</span>
-                    <div style={dateInlineBox}>
-                      <input
-                        type="date"
-                        value={form.endDate}
-                        onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                        style={dateInlineInput}
-                        disabled={saving}
-                      />
-                      <span style={dateInlineWeekday}>
-                        {form.endDate ? formatWeekdayJa(form.endDate) : ''}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label style={halfLabel}>
-                    <span>終了時刻</span>
-                    <input
-                      type="time"
-                      value={form.endTime}
-                      onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))}
-                      style={input}
-                      disabled={saving || form.allDay}
-                    />
-                  </label>
-                </div>
-
-                <label style={checkLabel}>
-                  <input
-                    type="checkbox"
-                    checked={form.allDay}
-                    onChange={(e) => setForm((prev) => ({ ...prev, allDay: e.target.checked }))}
-                    disabled={saving}
-                  />
-                  終日
-                </label>
-
-                <label style={label}>
-                  メモ
-                  <textarea
-                    value={form.memo}
-                    onChange={(e) => setForm((prev) => ({ ...prev, memo: e.target.value }))}
-                    style={textarea}
-                    disabled={saving}
-                  />
-                </label>
-              </div>
-
-              <div style={modalActions}>
-                <button style={button} onClick={closeModal} disabled={saving}>キャンセル</button>
-                {form.id && (
-                  <button style={dangerButton} onClick={handleDelete} disabled={saving}>削除</button>
-                )}
-                <button style={primaryButton} onClick={handleSave} disabled={saving}>
-                  {saving ? '保存中...' : '保存'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <EventFormModal
+          open={modalOpen}
+          saving={saving}
+          form={form}
+          setForm={setForm}
+          onClose={closeModal}
+          onSave={handleSave}
+          onDelete={handleDelete}
+        />
       </div>
     </SchedulerShell>
   );
@@ -515,11 +373,14 @@ function buildLocalIso(date: string, time: string) {
   return localDate.toISOString();
 }
 
-function formatDate(date: Date) {
-  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+function formatDateParam(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-function formatDateParam(date: Date) {
+function formatLocalDateKey(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
@@ -533,22 +394,22 @@ function toDateInputValue(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
-function toTimeInputValue(date: Date) {
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
+function formatWeekdayShort(date: Date) {
+  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+  return `${weekdays[date.getDay()]}曜日`;
 }
 
-function formatTime(iso: string) {
-  const date = new Date(iso);
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+function formatDateLabel(date: Date) {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  return `${y}/${m}/${d}`;
 }
 
-function formatWeekdayJa(date: string) {
-  const [year, month, day] = date.split('-').map(Number);
-  const d = new Date(year, month - 1, day);
-  const weekdays = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
-  return weekdays[d.getDay()];
+function formatTime(date: Date) {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
 }
 
 const wrap: React.CSSProperties = {
@@ -558,8 +419,8 @@ const wrap: React.CSSProperties = {
 
 const toolbar: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
   justifyContent: 'space-between',
+  alignItems: 'center',
   gap: 12,
   flexWrap: 'wrap',
 };
@@ -568,6 +429,7 @@ const toolbarLeft: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 12,
+  flexWrap: 'wrap',
 };
 
 const toolbarRight: React.CSSProperties = {
@@ -603,16 +465,6 @@ const primaryButton: React.CSSProperties = {
   boxShadow: '0 8px 18px rgba(99, 102, 241, 0.22)',
 };
 
-const dangerButton: React.CSSProperties = {
-  border: 'none',
-  borderRadius: 12,
-  background: 'linear-gradient(90deg, #ef4444, #dc2626)',
-  color: '#fff',
-  padding: '10px 16px',
-  cursor: 'pointer',
-  fontWeight: 800,
-};
-
 const errorBox: React.CSSProperties = {
   color: '#b42318',
   fontSize: 13,
@@ -631,110 +483,101 @@ const loadingBox: React.CSSProperties = {
 
 const weekScrollWrap: React.CSSProperties = {
   width: '100%',
-  maxHeight: 'calc(100vh - 220px)',
   overflowX: 'auto',
   overflowY: 'auto',
   WebkitOverflowScrolling: 'touch',
 };
 
-const calendarCard: React.CSSProperties = {
-  minWidth: 1100,
+const weekCard: React.CSSProperties = {
+  minWidth: 980,
   background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
   borderRadius: 24,
   padding: 16,
   boxShadow: '0 14px 30px rgba(91, 98, 133, 0.10)',
 };
 
-const grid: React.CSSProperties = {
+const weekGrid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '90px repeat(7, minmax(140px, 1fr))',
-  background: 'rgba(99,102,241,0.08)',
-  borderRadius: 16,
-  overflow: 'hidden',
+  gridTemplateColumns: 'repeat(7, minmax(130px, 1fr))',
+  gap: 10,
 };
 
-const timeHeader: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #eef6ff 0%, #dbeafe 100%)',
+const dayColumn: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateRows: 'auto 1fr',
+  minHeight: 520,
 };
 
 const dayHeader: React.CSSProperties = {
-  padding: '12px 8px',
   background: 'linear-gradient(135deg, #eef6ff 0%, #dbeafe 100%)',
-  borderLeft: '1px solid rgba(99,102,241,0.08)',
-  textAlign: 'center',
+  borderRadius: '16px 16px 0 0',
+  padding: '12px 10px',
+  display: 'grid',
+  gap: 6,
+  color: '#1d4ed8',
 };
 
 const sundayHeader: React.CSSProperties = {
-  padding: '12px 8px',
   background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
-  borderLeft: '1px solid rgba(99,102,241,0.08)',
-  textAlign: 'center',
+  borderRadius: '16px 16px 0 0',
+  padding: '12px 10px',
+  display: 'grid',
+  gap: 6,
+  color: '#dc2626',
 };
 
 const saturdayHeader: React.CSSProperties = {
-  padding: '12px 8px',
   background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-  borderLeft: '1px solid rgba(99,102,241,0.08)',
-  textAlign: 'center',
+  borderRadius: '16px 16px 0 0',
+  padding: '12px 10px',
+  display: 'grid',
+  gap: 6,
+  color: '#2563eb',
 };
 
-const weekHeaderTop: React.CSSProperties = {
+const weekdayText: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 900,
+};
+
+const dateRow: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
-  gap: 4,
+  gap: 6,
   minWidth: 0,
 };
 
-const dayDate: React.CSSProperties = {
-  fontWeight: 800,
+const normalDateText: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 900,
   color: '#1f2340',
-  flexShrink: 0,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 28,
-  padding: '0 8px',
-  borderRadius: 999,
 };
 
-const dayWeek: React.CSSProperties = {
-  fontSize: 12,
-  color: '#5b6285',
-  fontWeight: 700,
-};
-
-const sundayDateStyle: React.CSSProperties = {
-  fontWeight: 800,
+const sundayDateText: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 900,
   color: '#dc2626',
-  flexShrink: 0,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 28,
-  padding: '0 8px',
-  borderRadius: 999,
 };
 
-const saturdayDateStyle: React.CSSProperties = {
-  fontWeight: 800,
+const saturdayDateText: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 900,
   color: '#2563eb',
-  flexShrink: 0,
+};
+
+const todayDateText: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  minHeight: 28,
-  padding: '0 8px',
+  minWidth: 42,
+  height: 30,
   borderRadius: 999,
-};
-
-const todayWeekDateStyle: React.CSSProperties = {
-  color: '#111827',
   border: '2px solid #111827',
-  background: '#ffffff',
+  background: '#fff',
+  color: '#111827',
 };
 
-const weekHolidayInline: React.CSSProperties = {
+const holidayNameStyle: React.CSSProperties = {
   minWidth: 0,
   fontSize: 10,
   fontWeight: 800,
@@ -744,211 +587,83 @@ const weekHolidayInline: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-const sundayWeekStyle: React.CSSProperties = {
-  fontSize: 12,
-  color: '#dc2626',
-  fontWeight: 700,
-};
-
-const saturdayWeekStyle: React.CSSProperties = {
-  fontSize: 12,
-  color: '#2563eb',
-  fontWeight: 700,
-};
-
-const timeCell: React.CSSProperties = {
-  padding: '10px 8px',
-  borderBottom: '1px solid rgba(99,102,241,0.08)',
-  color: '#5b6285',
-  fontSize: 12,
+const dayCard: React.CSSProperties = {
   background: '#fff',
-  fontWeight: 700,
+  borderRadius: '0 0 16px 16px',
+  padding: 10,
+  display: 'grid',
+  alignContent: 'start',
+  gap: 10,
 };
 
-const cell: React.CSSProperties = {
-  borderLeft: '1px solid rgba(99,102,241,0.08)',
-  borderBottom: '1px solid rgba(99,102,241,0.08)',
-  background: '#fff',
-  textAlign: 'left',
-  padding: 6,
-  minHeight: 76,
-};
-
-const sundayCell: React.CSSProperties = {
+const sundayDayCard: React.CSSProperties = {
   background: 'linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%)',
+  borderRadius: '0 0 16px 16px',
+  padding: 10,
+  display: 'grid',
+  alignContent: 'start',
+  gap: 10,
 };
 
-const saturdayCell: React.CSSProperties = {
+const saturdayDayCard: React.CSSProperties = {
   background: 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)',
+  borderRadius: '0 0 16px 16px',
+  padding: 10,
+  display: 'grid',
+  alignContent: 'start',
+  gap: 10,
 };
 
-const cellTop: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  marginBottom: 6,
-};
-
-const miniButton: React.CSSProperties = {
+const addButton: React.CSSProperties = {
   border: 'none',
-  borderRadius: 10,
+  borderRadius: 12,
   background: 'linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)',
   color: '#166534',
-  width: 28,
-  height: 28,
+  padding: '9px 8px',
   cursor: 'pointer',
   fontWeight: 800,
+  fontSize: 12,
+  textAlign: 'center',
+};
+
+const eventList: React.CSSProperties = {
+  display: 'grid',
+  gap: 8,
+};
+
+const emptyText: React.CSSProperties = {
+  color: '#9ca3af',
+  fontSize: 12,
+  fontWeight: 700,
+  textAlign: 'center',
+  padding: '16px 4px',
 };
 
 const eventItem: React.CSSProperties = {
   border: 'none',
-  width: '100%',
-  textAlign: 'left',
   borderRadius: 12,
-  padding: '8px 10px',
-  fontSize: 12,
-  display: 'grid',
-  gap: 3,
-  cursor: 'pointer',
   background: 'linear-gradient(135deg, #eef2ff 0%, #e9d5ff 100%)',
   color: '#312e81',
-  marginBottom: 6,
-};
-
-const eventTitle: React.CSSProperties = {
-  fontWeight: 800,
+  padding: '8px 10px',
+  cursor: 'pointer',
+  textAlign: 'left',
+  display: 'grid',
+  gap: 3,
 };
 
 const eventTime: React.CSSProperties = {
   fontSize: 11,
   color: '#5b6285',
-  fontWeight: 700,
+  fontWeight: 800,
+};
+
+const eventTitle: React.CSSProperties = {
+  fontWeight: 900,
+  fontSize: 13,
 };
 
 const eventOwner: React.CSSProperties = {
   fontSize: 11,
   color: '#5b6285',
   fontWeight: 700,
-};
-
-const overlay: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(15, 23, 42, 0.35)',
-  display: 'grid',
-  placeItems: 'center',
-  padding: 16,
-  zIndex: 50,
-};
-
-const modal: React.CSSProperties = {
-  width: '100%',
-  maxWidth: 576,
-  background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
-  borderRadius: 19,
-  padding: 19,
-  boxShadow: '0 16px 32px rgba(15, 23, 42, 0.20)',
-};
-
-const modalTitle: React.CSSProperties = {
-  margin: '0 0 13px',
-  fontSize: 19,
-  color: '#1f2340',
-};
-
-const formGrid: React.CSSProperties = {
-  display: 'grid',
-  gap: 11,
-};
-
-const label: React.CSSProperties = {
-  display: 'grid',
-  gap: 6,
-  fontWeight: 700,
-  color: '#394067',
-};
-
-const halfLabel: React.CSSProperties = {
-  display: 'grid',
-  gap: 6,
-  fontWeight: 700,
-  color: '#394067',
-  flex: 1,
-  minWidth: 0,
-};
-
-const dateTimeRow: React.CSSProperties = {
-  display: 'flex',
-  gap: 10,
-  flexWrap: 'wrap',
-};
-
-const dateInlineBox: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  width: '100%',
-  padding: '0 11px',
-  border: '1px solid #d8dcef',
-  borderRadius: 11,
-  boxSizing: 'border-box',
-  background: '#fff',
-  minHeight: 42,
-};
-
-const dateInlineInput: React.CSSProperties = {
-  flex: 1,
-  minWidth: 0,
-  border: 'none',
-  outline: 'none',
-  fontSize: 14,
-  background: 'transparent',
-  padding: '9px 0',
-  boxSizing: 'border-box',
-};
-
-const dateInlineWeekday: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 800,
-  color: '#5b6285',
-  whiteSpace: 'nowrap',
-  flexShrink: 0,
-};
-
-const input: React.CSSProperties = {
-  width: '100%',
-  padding: '9px 11px',
-  border: '1px solid #d8dcef',
-  borderRadius: 11,
-  fontSize: 14,
-  boxSizing: 'border-box',
-  background: '#fff',
-  minHeight: 42,
-};
-
-const textarea: React.CSSProperties = {
-  width: '100%',
-  minHeight: 80,
-  padding: '9px 11px',
-  border: '1px solid #d8dcef',
-  borderRadius: 11,
-  fontSize: 14,
-  boxSizing: 'border-box',
-  background: '#fff',
-  resize: 'vertical',
-};
-
-const checkLabel: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  fontWeight: 700,
-  color: '#394067',
-};
-
-const modalActions: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: 8,
-  marginTop: 14,
-  flexWrap: 'wrap',
 };
