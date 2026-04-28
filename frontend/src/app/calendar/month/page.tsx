@@ -1,5 +1,10 @@
 'use client';
 
+import EventFormModal, {
+  EMPTY_FORM,
+  EventFormState,
+  buildFormFromEvent,
+} from '@/components/EventFormModal';
 import SchedulerShell from '@/components/SchedulerShell';
 import {
   createEvent,
@@ -10,29 +15,6 @@ import {
 import { EventItem } from '@/lib/types';
 import { between, isHoliday } from 'holiday-jp-dayjs';
 import { useEffect, useMemo, useState } from 'react';
-
-type EventFormState = {
-  id?: number;
-  title: string;
-  category: string;
-  memo: string;
-  startDate: string;
-  startTime: string;
-  endDate: string;
-  endTime: string;
-  allDay: boolean;
-};
-
-const EMPTY_FORM: EventFormState = {
-  title: '',
-  category: 'other',
-  memo: '',
-  startDate: '',
-  startTime: '',
-  endDate: '',
-  endTime: '',
-  allDay: false,
-};
 
 const FIXED_CALENDAR_ID = 1;
 
@@ -128,20 +110,7 @@ export default function CalendarMonthPage() {
   };
 
   const openEditModal = (event: (typeof normalizedEvents)[number]) => {
-    const start = new Date(event.startAt as string);
-    const end = new Date(event.endAt as string);
-
-    setForm({
-      id: event.id,
-      title: event.title,
-      category: event.category,
-      memo: event.memo ?? '',
-      startDate: toDateInputValue(start),
-      startTime: toTimeInputValue(start),
-      endDate: toDateInputValue(end),
-      endTime: toTimeInputValue(end),
-      allDay: Boolean(event.allDay),
-    });
+    setForm(buildFormFromEvent(event));
     setError(null);
     setModalOpen(true);
   };
@@ -337,7 +306,9 @@ export default function CalendarMonthPage() {
                             title={e.title}
                           >
                             <div style={eventTitle}>{e.title}</div>
-                            {e.owner_name ? <div style={eventOwner}>担当: {e.owner_name}</div> : null}
+                            {e.owner_name ? (
+                              <div style={eventOwner}>担当: {e.owner_name}</div>
+                            ) : null}
                           </button>
                         ))}
                       </div>
@@ -349,178 +320,15 @@ export default function CalendarMonthPage() {
           </div>
         )}
 
-        {modalOpen && (
-          <div style={overlay} onClick={closeModal}>
-            <div style={modal} onClick={(e) => e.stopPropagation()}>
-              <h3 style={modalTitle}>{form.id ? '予定を編集' : '予定を追加'}</h3>
-
-              <div style={formGrid}>
-                <label style={label}>
-                  <span>タイトル</span>
-                  <input
-                    value={form.title}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        title: e.target.value,
-                      }))
-                    }
-                    placeholder="未入力なら「新しい予定」で保存されます"
-                    style={input}
-                    disabled={saving}
-                  />
-                </label>
-
-                <label style={label}>
-                  <span>区分</span>
-                  <select
-                    value={form.category}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        category: e.target.value,
-                      }))
-                    }
-                    style={input}
-                    disabled={saving}
-                  >
-                    <option value="other">その他</option>
-                    <option value="meeting">会議</option>
-                    <option value="work">業務</option>
-                    <option value="review">レビュー</option>
-                    <option value="personal">個人</option>
-                    <option value="holiday">休暇</option>
-                    <option value="visit">訪問</option>
-                  </select>
-                </label>
-
-                <div style={dateTimeRow}>
-                  <label style={halfLabel}>
-                    <span>開始日</span>
-                    <div style={dateInlineBox}>
-                      <input
-                        type="date"
-                        value={form.startDate}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            startDate: e.target.value,
-                          }))
-                        }
-                        style={dateInlineInput}
-                        disabled={saving}
-                      />
-                      <span style={dateInlineWeekday}>
-                        {form.startDate ? formatWeekdayJa(form.startDate) : ''}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label style={halfLabel}>
-                    <span>開始時刻</span>
-                    <input
-                      type="time"
-                      value={form.startTime}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          startTime: e.target.value,
-                        }))
-                      }
-                      style={input}
-                      disabled={saving || form.allDay}
-                    />
-                  </label>
-                </div>
-
-                <div style={dateTimeRow}>
-                  <label style={halfLabel}>
-                    <span>終了日</span>
-                    <div style={dateInlineBox}>
-                      <input
-                        type="date"
-                        value={form.endDate}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            endDate: e.target.value,
-                          }))
-                        }
-                        style={dateInlineInput}
-                        disabled={saving}
-                      />
-                      <span style={dateInlineWeekday}>
-                        {form.endDate ? formatWeekdayJa(form.endDate) : ''}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label style={halfLabel}>
-                    <span>終了時刻</span>
-                    <input
-                      type="time"
-                      value={form.endTime}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          endTime: e.target.value,
-                        }))
-                      }
-                      style={input}
-                      disabled={saving || form.allDay}
-                    />
-                  </label>
-                </div>
-
-                <label style={checkLabel}>
-                  <input
-                    type="checkbox"
-                    checked={form.allDay}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        allDay: e.target.checked,
-                      }))
-                    }
-                    disabled={saving}
-                  />
-                  終日
-                </label>
-
-                <label style={label}>
-                  <span>メモ</span>
-                  <textarea
-                    value={form.memo}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        memo: e.target.value,
-                      }))
-                    }
-                    style={textarea}
-                    disabled={saving}
-                  />
-                </label>
-              </div>
-
-              <div style={modalActions}>
-                <button style={button} onClick={closeModal} disabled={saving}>
-                  キャンセル
-                </button>
-
-                {form.id && (
-                  <button style={dangerButton} onClick={handleDelete} disabled={saving}>
-                    削除
-                  </button>
-                )}
-
-                <button style={primaryButton} onClick={handleSave} disabled={saving}>
-                  {saving ? '保存中...' : '保存'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <EventFormModal
+          open={modalOpen}
+          saving={saving}
+          form={form}
+          setForm={setForm}
+          onClose={closeModal}
+          onSave={handleSave}
+          onDelete={handleDelete}
+        />
       </div>
     </SchedulerShell>
   );
@@ -566,19 +374,6 @@ function toDateInputValue(date: Date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
-}
-
-function toTimeInputValue(date: Date) {
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
-
-function formatWeekdayJa(date: string) {
-  const [year, month, day] = date.split('-').map(Number);
-  const d = new Date(year, month - 1, day);
-  const weekdays = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
-  return weekdays[d.getDay()];
 }
 
 const wrap: React.CSSProperties = {
@@ -631,16 +426,6 @@ const primaryButton: React.CSSProperties = {
   cursor: 'pointer',
   fontWeight: 800,
   boxShadow: '0 8px 18px rgba(99, 102, 241, 0.22)',
-};
-
-const dangerButton: React.CSSProperties = {
-  border: 'none',
-  borderRadius: 12,
-  background: 'linear-gradient(90deg, #ef4444, #dc2626)',
-  color: '#fff',
-  padding: '10px 16px',
-  cursor: 'pointer',
-  fontWeight: 800,
 };
 
 const errorBox: React.CSSProperties = {
@@ -812,127 +597,4 @@ const eventOwner: React.CSSProperties = {
   fontSize: 11,
   color: '#5b6285',
   fontWeight: 700,
-};
-
-const overlay: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(15, 23, 42, 0.35)',
-  display: 'grid',
-  placeItems: 'center',
-  padding: 16,
-  zIndex: 50,
-};
-
-const modal: React.CSSProperties = {
-  width: '100%',
-  maxWidth: 576,
-  background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
-  borderRadius: 19,
-  padding: 19,
-  boxShadow: '0 16px 32px rgba(15, 23, 42, 0.20)',
-};
-
-const modalTitle: React.CSSProperties = {
-  margin: '0 0 13px',
-  fontSize: 19,
-  color: '#1f2340',
-};
-
-const formGrid: React.CSSProperties = {
-  display: 'grid',
-  gap: 11,
-};
-
-const label: React.CSSProperties = {
-  display: 'grid',
-  gap: 6,
-  fontWeight: 700,
-  color: '#394067',
-};
-
-const halfLabel: React.CSSProperties = {
-  display: 'grid',
-  gap: 6,
-  fontWeight: 700,
-  color: '#394067',
-  flex: 1,
-  minWidth: 0,
-};
-
-const dateTimeRow: React.CSSProperties = {
-  display: 'flex',
-  gap: 10,
-  flexWrap: 'wrap',
-};
-
-const dateInlineBox: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  width: '100%',
-  padding: '0 11px',
-  border: '1px solid #d8dcef',
-  borderRadius: 11,
-  boxSizing: 'border-box',
-  background: '#fff',
-  minHeight: 42,
-};
-
-const dateInlineInput: React.CSSProperties = {
-  flex: 1,
-  minWidth: 0,
-  border: 'none',
-  outline: 'none',
-  fontSize: 14,
-  background: 'transparent',
-  padding: '9px 0',
-  boxSizing: 'border-box',
-};
-
-const dateInlineWeekday: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 800,
-  color: '#5b6285',
-  whiteSpace: 'nowrap',
-  flexShrink: 0,
-};
-
-const input: React.CSSProperties = {
-  width: '100%',
-  padding: '9px 11px',
-  border: '1px solid #d8dcef',
-  borderRadius: 11,
-  fontSize: 14,
-  boxSizing: 'border-box',
-  background: '#fff',
-  minHeight: 42,
-};
-
-const textarea: React.CSSProperties = {
-  width: '100%',
-  minHeight: 80,
-  padding: '9px 11px',
-  border: '1px solid #d8dcef',
-  borderRadius: 11,
-  fontSize: 14,
-  boxSizing: 'border-box',
-  background: '#fff',
-  resize: 'vertical',
-};
-
-const checkLabel: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  fontWeight: 700,
-  color: '#394067',
-};
-
-const modalActions: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: 8,
-  marginTop: 14,
-  flexWrap: 'wrap',
 };
