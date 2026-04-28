@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { EventItem } from '@/lib/types';
 
 export type EventFormState = {
@@ -80,12 +81,7 @@ export default function EventFormModal({
             <span>タイトル</span>
             <input
               value={form.title}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  title: e.target.value,
-                }))
-              }
+              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
               placeholder="未入力なら「新しい予定」で保存されます"
               style={input}
               disabled={saving}
@@ -96,12 +92,7 @@ export default function EventFormModal({
             <span>区分</span>
             <select
               value={form.category}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  category: e.target.value,
-                }))
-              }
+              onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               style={input}
               disabled={saving}
             >
@@ -116,40 +107,19 @@ export default function EventFormModal({
           </label>
 
           <div style={dateTimeRow}>
-            <label style={halfLabel}>
-              <span>開始日</span>
-              <div style={dateInlineBox}>
-                <input
-  type="text"
-  inputMode="numeric"
-  placeholder="2026-04-24"
-  value={form.startDate}
-  onChange={(e) =>
-    setForm((prev) => ({
-      ...prev,
-      startDate: e.target.value,
-    }))
-  }
-  style={dateInlineInput}
-  disabled={saving}
-/>
-                <span style={dateInlineWeekday}>
-                  {form.startDate ? formatWeekdayJa(form.startDate) : ''}
-                </span>
-              </div>
-            </label>
+            <DatePickerField
+              label="開始日"
+              value={form.startDate}
+              disabled={saving}
+              onChange={(value) => setForm((prev) => ({ ...prev, startDate: value }))}
+            />
 
             <label style={halfLabel}>
               <span>開始時刻</span>
               <input
                 type="time"
                 value={form.startTime}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    startTime: e.target.value,
-                  }))
-                }
+                onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))}
                 style={input}
                 disabled={saving || form.allDay}
               />
@@ -157,40 +127,19 @@ export default function EventFormModal({
           </div>
 
           <div style={dateTimeRow}>
-            <label style={halfLabel}>
-              <span>終了日</span>
-              <div style={dateInlineBox}>
-                <input
-  type="text"
-  inputMode="numeric"
-  placeholder="2026-04-24"
-  value={form.endDate}
-  onChange={(e) =>
-    setForm((prev) => ({
-      ...prev,
-      endDate: e.target.value,
-    }))
-  }
-  style={dateInlineInput}
-  disabled={saving}
-/>
-                <span style={dateInlineWeekday}>
-                  {form.endDate ? formatWeekdayJa(form.endDate) : ''}
-                </span>
-              </div>
-            </label>
+            <DatePickerField
+              label="終了日"
+              value={form.endDate}
+              disabled={saving}
+              onChange={(value) => setForm((prev) => ({ ...prev, endDate: value }))}
+            />
 
             <label style={halfLabel}>
               <span>終了時刻</span>
               <input
                 type="time"
                 value={form.endTime}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    endTime: e.target.value,
-                  }))
-                }
+                onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))}
                 style={input}
                 disabled={saving || form.allDay}
               />
@@ -201,12 +150,7 @@ export default function EventFormModal({
             <input
               type="checkbox"
               checked={form.allDay}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  allDay: e.target.checked,
-                }))
-              }
+              onChange={(e) => setForm((prev) => ({ ...prev, allDay: e.target.checked }))}
               disabled={saving}
             />
             終日
@@ -216,12 +160,7 @@ export default function EventFormModal({
             <span>メモ</span>
             <textarea
               value={form.memo}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  memo: e.target.value,
-                }))
-              }
+              onChange={(e) => setForm((prev) => ({ ...prev, memo: e.target.value }))}
               style={textarea}
               disabled={saving}
             />
@@ -246,6 +185,122 @@ export default function EventFormModal({
       </div>
     </div>
   );
+}
+
+function DatePickerField({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [viewDate, setViewDate] = useState(() => {
+    if (value) return parseDateValue(value);
+    return new Date();
+  });
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  const days = useMemo(() => {
+    const first = new Date(year, month, 1);
+    const startDay = first.getDay();
+    const start = new Date(year, month, 1 - startDay);
+
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  }, [year, month]);
+
+  const selectedKey = value;
+  const weekday = value ? formatWeekdayJa(value) : '';
+
+  const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setViewDate(new Date(year, month + 1, 1));
+
+  const selectDate = (date: Date) => {
+    onChange(toDateInputValue(date));
+    setOpen(false);
+  };
+
+  return (
+    <label style={halfLabel}>
+      <span>{label}</span>
+
+      <div style={datePickerWrap}>
+        <button
+          type="button"
+          style={datePickerButton}
+          onClick={() => !disabled && setOpen((prev) => !prev)}
+          disabled={disabled}
+        >
+          <span>{value || '日付を選択'}</span>
+          <span style={dateInlineWeekday}>{weekday}</span>
+        </button>
+
+        {open && (
+          <div style={calendarPopup}>
+            <div style={calendarPopupHeader}>
+              <button type="button" style={smallNavButton} onClick={prevMonth}>
+                前
+              </button>
+              <strong>
+                {year}年{month + 1}月
+              </strong>
+              <button type="button" style={smallNavButton} onClick={nextMonth}>
+                次
+              </button>
+            </div>
+
+            <div style={weekdayGrid}>
+              {['日', '月', '火', '水', '木', '金', '土'].map((d) => (
+                <div key={d} style={weekdayCell}>
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            <div style={calendarGrid}>
+              {days.map((date) => {
+                const key = toDateInputValue(date);
+                const isCurrentMonth = date.getMonth() === month;
+                const isSelected = key === selectedKey;
+                const day = date.getDay();
+
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    style={{
+                      ...calendarDayButton,
+                      opacity: isCurrentMonth ? 1 : 0.35,
+                      color: day === 0 ? '#dc2626' : day === 6 ? '#2563eb' : '#1f2340',
+                      ...(isSelected ? selectedDayButton : {}),
+                    }}
+                    onClick={() => selectDate(date)}
+                  >
+                    {date.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </label>
+  );
+}
+
+function parseDateValue(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
 }
 
 function toDateInputValue(date: Date) {
@@ -322,35 +377,99 @@ const dateTimeRow: React.CSSProperties = {
   alignItems: 'start',
 };
 
-const dateInlineBox: React.CSSProperties = {
-  display: 'grid',
-  gap: 4,
-  width: '100%',
-  padding: '6px 8px',
-  border: '1px solid #d8dcef',
-  borderRadius: 10,
-  boxSizing: 'border-box',
-  background: '#fff',
-  minHeight: 56,
+const datePickerWrap: React.CSSProperties = {
+  position: 'relative',
 };
 
-const dateInlineInput: React.CSSProperties = {
+const datePickerButton: React.CSSProperties = {
   width: '100%',
-  minWidth: 140,
-  border: 'none',
-  outline: 'none',
-  fontSize: 13,
-  background: 'transparent',
-  padding: 0,
+  minHeight: 36,
+  border: '1px solid #d8dcef',
+  borderRadius: 10,
+  background: '#fff',
+  padding: '7px 10px',
   boxSizing: 'border-box',
+  cursor: 'pointer',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 8,
+  fontSize: 13,
+  fontWeight: 700,
+  color: '#1f2340',
 };
 
 const dateInlineWeekday: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 800,
   color: '#5b6285',
-  lineHeight: 1,
   whiteSpace: 'nowrap',
+};
+
+const calendarPopup: React.CSSProperties = {
+  position: 'absolute',
+  top: 44,
+  left: 0,
+  zIndex: 80,
+  width: 260,
+  background: '#fff',
+  border: '1px solid #d8dcef',
+  borderRadius: 14,
+  padding: 10,
+  boxShadow: '0 14px 30px rgba(15, 23, 42, 0.16)',
+};
+
+const calendarPopupHeader: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 8,
+  marginBottom: 8,
+  color: '#1f2340',
+};
+
+const smallNavButton: React.CSSProperties = {
+  border: '1px solid #d8dcef',
+  borderRadius: 9,
+  background: '#fff',
+  padding: '5px 8px',
+  cursor: 'pointer',
+  fontWeight: 800,
+  fontSize: 12,
+};
+
+const weekdayGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(7, 1fr)',
+  gap: 4,
+  marginBottom: 4,
+};
+
+const weekdayCell: React.CSSProperties = {
+  textAlign: 'center',
+  fontSize: 11,
+  fontWeight: 900,
+  color: '#5b6285',
+};
+
+const calendarGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(7, 1fr)',
+  gap: 4,
+};
+
+const calendarDayButton: React.CSSProperties = {
+  border: 'none',
+  borderRadius: 9,
+  background: '#f8fafc',
+  height: 30,
+  cursor: 'pointer',
+  fontWeight: 800,
+};
+
+const selectedDayButton: React.CSSProperties = {
+  background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+  color: '#fff',
 };
 
 const input: React.CSSProperties = {
