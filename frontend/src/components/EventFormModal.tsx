@@ -120,17 +120,19 @@ export default function EventFormModal({
               <span>開始日</span>
               <div style={dateInlineBox}>
                 <input
-                  type="date"
-                  value={form.startDate}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      startDate: e.target.value,
-                    }))
-                  }
-                  style={dateInlineInput}
-                  disabled={saving}
-                />
+  type="text"
+  inputMode="numeric"
+  placeholder="2026-04-24"
+  value={form.startDate}
+  onChange={(e) =>
+    setForm((prev) => ({
+      ...prev,
+      startDate: e.target.value,
+    }))
+  }
+  style={dateInlineInput}
+  disabled={saving}
+/>
                 <span style={dateInlineWeekday}>
                   {form.startDate ? formatWeekdayJa(form.startDate) : ''}
                 </span>
@@ -159,17 +161,19 @@ export default function EventFormModal({
               <span>終了日</span>
               <div style={dateInlineBox}>
                 <input
-                  type="date"
-                  value={form.endDate}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      endDate: e.target.value,
-                    }))
-                  }
-                  style={dateInlineInput}
-                  disabled={saving}
-                />
+  type="text"
+  inputMode="numeric"
+  placeholder="2026-04-24"
+  value={form.endDate}
+  onChange={(e) =>
+    setForm((prev) => ({
+      ...prev,
+      endDate: e.target.value,
+    }))
+  }
+  style={dateInlineInput}
+  disabled={saving}
+/>
                 <span style={dateInlineWeekday}>
                   {form.endDate ? formatWeekdayJa(form.endDate) : ''}
                 </span>
