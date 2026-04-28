@@ -1,7 +1,12 @@
 'use client';
 
 import SchedulerShell from '@/components/SchedulerShell';
-import { createEvent, deleteEvent, fetchEvents, updateEvent } from '@/lib/scheduler-db';
+import {
+  createEvent,
+  deleteEvent,
+  fetchEvents,
+  updateEvent,
+} from '@/lib/scheduler-db';
 import { EventItem } from '@/lib/types';
 import { between, isHoliday } from 'holiday-jp-dayjs';
 import { useEffect, useMemo, useState } from 'react';
@@ -31,7 +36,7 @@ const EMPTY_FORM: EventFormState = {
 
 const FIXED_CALENDAR_ID = 1;
 
-export default function CalendarWeekPage() {
+export default function CalendarMonthPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,34 +45,30 @@ export default function CalendarWeekPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EventFormState>(EMPTY_FORM);
 
-  const weekStart = useMemo(() => {
-    const d = new Date(currentDate);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + diff);
-    return d;
-  }, [currentDate]);
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const monthLabel = `${year}年${month + 1}月`;
+  const todayKey = formatLocalDateKey(new Date());
 
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(weekStart);
-      d.setDate(weekStart.getDate() + i);
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, month, 1);
+    const startDay = firstDay.getDay();
+    const startDate = new Date(year, month, 1 - startDay);
+
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
       return d;
     });
-  }, [weekStart]);
+  }, [year, month]);
 
-  const todayKey = formatDateParam(new Date());
-  const weekLabel = `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}`;
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-
-  const loadEvents = async (days: Date[]) => {
+  const loadEvents = async (y: number, m: number) => {
     try {
       setLoading(true);
       setError(null);
 
-      const from = formatDateParam(days[0]);
-      const to = formatDateParam(days[6]);
+      const from = formatDateParam(new Date(y, m, 1));
+      const to = formatDateParam(new Date(y, m + 1, 1));
       const data = await fetchEvents(FIXED_CALENDAR_ID, from, to);
 
       setEvents(data as EventItem[]);
@@ -79,20 +80,11 @@ export default function CalendarWeekPage() {
   };
 
   useEffect(() => {
-    loadEvents(weekDays);
-  }, [weekDays]);
+    loadEvents(year, month);
+  }, [year, month]);
 
-  const prevWeek = () => {
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() - 7);
-    setCurrentDate(d);
-  };
-
-  const nextWeek = () => {
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() + 7);
-    setCurrentDate(d);
-  };
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
   const goToday = () => {
     setCurrentDate(new Date());
@@ -108,12 +100,11 @@ export default function CalendarWeekPage() {
     }));
   }, [events]);
 
-  const eventsByDayAndHour = useMemo(() => {
+  const eventsByDate = useMemo(() => {
     const map = new Map<string, typeof normalizedEvents>();
 
     for (const e of normalizedEvents) {
-      const start = new Date(e.startAt as string);
-      const key = `${start.toISOString().slice(0, 10)}-${start.getHours()}`;
+      const key = formatLocalDateKey(new Date(e.startAt as string));
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
@@ -122,16 +113,15 @@ export default function CalendarWeekPage() {
     return map;
   }, [normalizedEvents]);
 
-  const openCreateModal = (date?: Date, hour?: number) => {
-    const baseDate = date ? new Date(date) : new Date(weekDays[0]);
-    const baseHour = typeof hour === 'number' ? hour : 9;
+  const openCreateModal = (date?: Date) => {
+    const baseDate = date ? new Date(date) : new Date(year, month, 1);
 
     setForm({
       ...EMPTY_FORM,
       startDate: toDateInputValue(baseDate),
-      startTime: `${String(baseHour).padStart(2, '0')}:00`,
+      startTime: '09:00',
       endDate: toDateInputValue(baseDate),
-      endTime: `${String(Math.min(baseHour + 1, 23)).padStart(2, '0')}:00`,
+      endTime: '10:00',
     });
     setError(null);
     setModalOpen(true);
@@ -212,7 +202,7 @@ export default function CalendarWeekPage() {
 
       setModalOpen(false);
       setForm(EMPTY_FORM);
-      await loadEvents(weekDays);
+      await loadEvents(year, month);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定保存に失敗しました');
     } finally {
@@ -231,7 +221,7 @@ export default function CalendarWeekPage() {
 
       setModalOpen(false);
       setForm(EMPTY_FORM);
-      await loadEvents(weekDays);
+      await loadEvents(year, month);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予定削除に失敗しました');
     } finally {
@@ -240,16 +230,16 @@ export default function CalendarWeekPage() {
   };
 
   return (
-    <SchedulerShell title="週表示">
+    <SchedulerShell title="月表示">
       <div style={wrap}>
         <div style={toolbar}>
           <div style={toolbarLeft}>
-            <button style={button} onClick={prevWeek}>
-              前週
+            <button style={button} onClick={prevMonth}>
+              前月
             </button>
-            <h2 style={title}>{weekLabel}</h2>
-            <button style={button} onClick={nextWeek}>
-              次週
+            <h2 style={title}>{monthLabel}</h2>
+            <button style={button} onClick={nextMonth}>
+              次月
             </button>
             <button style={button} onClick={goToday}>
               今日
@@ -268,112 +258,113 @@ export default function CalendarWeekPage() {
         {loading && <div style={loadingBox}>読み込み中...</div>}
 
         {!loading && (
-          <div style={weekScrollWrap}>
+          <div style={calendarScrollWrap}>
             <div style={calendarCard}>
               <div style={grid}>
-                <div style={timeHeader} />
-                {weekDays.map((day) => {
-                  const dayType = getDayType(day);
-                  const holidayName = getHolidayName(day);
-                  const isToday = formatDateParam(day) === todayKey;
-
+                {['日', '月', '火', '水', '木', '金', '土'].map((d, index) => {
                   const headerStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
+                    index === 0
                       ? sundayHeader
-                      : dayType === 'saturday'
+                      : index === 6
                         ? saturdayHeader
                         : dayHeader;
 
-                  const dateTextStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayDateStyle
-                      : dayType === 'saturday'
-                        ? saturdayDateStyle
-                        : dayDate;
-
-                  const weekTextStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayWeekStyle
-                      : dayType === 'saturday'
-                        ? saturdayWeekStyle
-                        : dayWeek;
-
                   return (
-                    <div key={day.toISOString()} style={headerStyle}>
-                      <div style={weekHeaderTop}>
-                        <div
-                          style={{
-                            ...dateTextStyle,
-                            ...(isToday ? todayWeekDateStyle : {}),
-                          }}
-                        >
-                          {`${day.getMonth() + 1}/${day.getDate()}`}
-                        </div>
-                        {holidayName ? <span style={weekHolidayInline}>{holidayName}</span> : null}
-                      </div>
-                      <div style={weekTextStyle}>{['日', '月', '火', '水', '木', '金', '土'][day.getDay()]}</div>
+                    <div key={d} style={headerStyle}>
+                      {d}
                     </div>
                   );
                 })}
 
-                {hours.map((hour) => (
-                  <div key={hour} style={{ display: 'contents' }}>
-                    <div style={timeCell}>{`${String(hour).padStart(2, '0')}:00`}</div>
-                    {weekDays.map((day) => {
-                      const key = `${day.toISOString().slice(0, 10)}-${hour}`;
-                      const dayEvents = eventsByDayAndHour.get(key) ?? [];
-                      const dayType = getDayType(day);
+                {calendarDays.map((date) => {
+                  const key = formatLocalDateKey(date);
+                  const dayEvents = eventsByDate.get(key) ?? [];
+                  const isCurrent = date.getMonth() === month;
+                  const isToday = key === todayKey;
+                  const dayType = getDayType(date);
+                  const holidayName = getHolidayName(date);
 
-                      const cellStyle =
-                        dayType === 'holiday' || dayType === 'sunday'
-                          ? sundayCell
-                          : dayType === 'saturday'
-                            ? saturdayCell
-                            : {};
+                  const holidayCellStyle =
+                    dayType === 'holiday' || dayType === 'sunday'
+                      ? sundayCell
+                      : dayType === 'saturday'
+                        ? saturdayCell
+                        : {};
 
-                      return (
-                        <div key={key} style={{ ...cell, ...cellStyle }}>
-                          <div style={cellTop}>
-                            <button style={miniButton} onClick={() => openCreateModal(day, hour)}>
-                              ＋
-                            </button>
-                          </div>
+                  const holidayDateStyle =
+                    dayType === 'holiday' || dayType === 'sunday'
+                      ? sundayDateStyle
+                      : dayType === 'saturday'
+                        ? saturdayDateStyle
+                        : {};
 
-                          {dayEvents.map((event) => (
-                            <button
-                              key={event.id}
-                              style={eventItem}
-                              onClick={() => openEditModal(event)}
-                              title={event.title}
-                            >
-                              <div style={eventTitle}>{event.title}</div>
-                              <div style={eventTime}>
-                                {formatTime(event.startAt as string)} - {formatTime(event.endAt as string)}
-                              </div>
-                              {event.owner_name ? <div style={eventOwner}>担当: {event.owner_name}</div> : null}
-                            </button>
-                          ))}
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        ...cell,
+                        ...holidayCellStyle,
+                        opacity: isCurrent ? 1 : 0.45,
+                      }}
+                    >
+                      <div style={cellHeader}>
+                        <div style={dateInlineRow}>
+                          <span
+                            style={{
+                              ...dateStyle,
+                              ...holidayDateStyle,
+                              ...(isToday ? todayDateStyle : {}),
+                            }}
+                          >
+                            {date.getDate()}
+                          </span>
+                          {holidayName ? (
+                            <span style={holidayNameInline}>{holidayName}</span>
+                          ) : null}
                         </div>
-                      );
-                    })}
-                  </div>
-                ))}
+
+                        <button style={miniButton} onClick={() => openCreateModal(date)}>
+                          ＋
+                        </button>
+                      </div>
+
+                      <div style={eventList}>
+                        {dayEvents.map((e) => (
+                          <button
+                            key={e.id}
+                            style={eventItem}
+                            onClick={() => openEditModal(e)}
+                            title={e.title}
+                          >
+                            <div style={eventTitle}>{e.title}</div>
+                            {e.owner_name ? <div style={eventOwner}>担当: {e.owner_name}</div> : null}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
         )}
 
         {modalOpen && (
-          <div style={overlay}>
-            <div style={modal}>
+          <div style={overlay} onClick={closeModal}>
+            <div style={modal} onClick={(e) => e.stopPropagation()}>
               <h3 style={modalTitle}>{form.id ? '予定を編集' : '予定を追加'}</h3>
 
               <div style={formGrid}>
                 <label style={label}>
-                  タイトル
+                  <span>タイトル</span>
                   <input
                     value={form.title}
-                    onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
                     placeholder="未入力なら「新しい予定」で保存されます"
                     style={input}
                     disabled={saving}
@@ -381,10 +372,15 @@ export default function CalendarWeekPage() {
                 </label>
 
                 <label style={label}>
-                  区分
+                  <span>区分</span>
                   <select
                     value={form.category}
-                    onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        category: e.target.value,
+                      }))
+                    }
                     style={input}
                     disabled={saving}
                   >
@@ -405,7 +401,12 @@ export default function CalendarWeekPage() {
                       <input
                         type="date"
                         value={form.startDate}
-                        onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            startDate: e.target.value,
+                          }))
+                        }
                         style={dateInlineInput}
                         disabled={saving}
                       />
@@ -420,7 +421,12 @@ export default function CalendarWeekPage() {
                     <input
                       type="time"
                       value={form.startTime}
-                      onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          startTime: e.target.value,
+                        }))
+                      }
                       style={input}
                       disabled={saving || form.allDay}
                     />
@@ -434,7 +440,12 @@ export default function CalendarWeekPage() {
                       <input
                         type="date"
                         value={form.endDate}
-                        onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            endDate: e.target.value,
+                          }))
+                        }
                         style={dateInlineInput}
                         disabled={saving}
                       />
@@ -449,7 +460,12 @@ export default function CalendarWeekPage() {
                     <input
                       type="time"
                       value={form.endTime}
-                      onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          endTime: e.target.value,
+                        }))
+                      }
                       style={input}
                       disabled={saving || form.allDay}
                     />
@@ -460,17 +476,27 @@ export default function CalendarWeekPage() {
                   <input
                     type="checkbox"
                     checked={form.allDay}
-                    onChange={(e) => setForm((prev) => ({ ...prev, allDay: e.target.checked }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        allDay: e.target.checked,
+                      }))
+                    }
                     disabled={saving}
                   />
                   終日
                 </label>
 
                 <label style={label}>
-                  メモ
+                  <span>メモ</span>
                   <textarea
                     value={form.memo}
-                    onChange={(e) => setForm((prev) => ({ ...prev, memo: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        memo: e.target.value,
+                      }))
+                    }
                     style={textarea}
                     disabled={saving}
                   />
@@ -478,10 +504,16 @@ export default function CalendarWeekPage() {
               </div>
 
               <div style={modalActions}>
-                <button style={button} onClick={closeModal} disabled={saving}>キャンセル</button>
+                <button style={button} onClick={closeModal} disabled={saving}>
+                  キャンセル
+                </button>
+
                 {form.id && (
-                  <button style={dangerButton} onClick={handleDelete} disabled={saving}>削除</button>
+                  <button style={dangerButton} onClick={handleDelete} disabled={saving}>
+                    削除
+                  </button>
                 )}
+
                 <button style={primaryButton} onClick={handleSave} disabled={saving}>
                   {saving ? '保存中...' : '保存'}
                 </button>
@@ -515,11 +547,14 @@ function buildLocalIso(date: string, time: string) {
   return localDate.toISOString();
 }
 
-function formatDate(date: Date) {
-  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+function formatDateParam(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-function formatDateParam(date: Date) {
+function formatLocalDateKey(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
@@ -539,11 +574,6 @@ function toTimeInputValue(date: Date) {
   return `${hh}:${mm}`;
 }
 
-function formatTime(iso: string) {
-  const date = new Date(iso);
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
 function formatWeekdayJa(date: string) {
   const [year, month, day] = date.split('-').map(Number);
   const d = new Date(year, month - 1, day);
@@ -558,8 +588,8 @@ const wrap: React.CSSProperties = {
 
 const toolbar: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
   justifyContent: 'space-between',
+  alignItems: 'center',
   gap: 12,
   flexWrap: 'wrap',
 };
@@ -629,16 +659,15 @@ const loadingBox: React.CSSProperties = {
   padding: '20px',
 };
 
-const weekScrollWrap: React.CSSProperties = {
+const calendarScrollWrap: React.CSSProperties = {
   width: '100%',
-  maxHeight: 'calc(100vh - 220px)',
   overflowX: 'auto',
   overflowY: 'auto',
   WebkitOverflowScrolling: 'touch',
 };
 
 const calendarCard: React.CSSProperties = {
-  minWidth: 1100,
+  minWidth: 980,
   background: 'linear-gradient(180deg, #ffffff 0%, #fffafb 100%)',
   borderRadius: 24,
   padding: 16,
@@ -647,131 +676,43 @@ const calendarCard: React.CSSProperties = {
 
 const grid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '90px repeat(7, minmax(140px, 1fr))',
+  gridTemplateColumns: 'repeat(7, minmax(130px, 1fr))',
+  gap: 1,
   background: 'rgba(99,102,241,0.08)',
   borderRadius: 16,
   overflow: 'hidden',
 };
 
-const timeHeader: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #eef6ff 0%, #dbeafe 100%)',
-};
-
 const dayHeader: React.CSSProperties = {
-  padding: '12px 8px',
   background: 'linear-gradient(135deg, #eef6ff 0%, #dbeafe 100%)',
-  borderLeft: '1px solid rgba(99,102,241,0.08)',
+  padding: '12px 8px',
   textAlign: 'center',
+  fontWeight: 800,
+  color: '#1d4ed8',
 };
 
 const sundayHeader: React.CSSProperties = {
-  padding: '12px 8px',
   background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
-  borderLeft: '1px solid rgba(99,102,241,0.08)',
+  padding: '12px 8px',
   textAlign: 'center',
+  fontWeight: 800,
+  color: '#dc2626',
 };
 
 const saturdayHeader: React.CSSProperties = {
-  padding: '12px 8px',
   background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-  borderLeft: '1px solid rgba(99,102,241,0.08)',
+  padding: '12px 8px',
   textAlign: 'center',
-};
-
-const weekHeaderTop: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 4,
-  minWidth: 0,
-};
-
-const dayDate: React.CSSProperties = {
-  fontWeight: 800,
-  color: '#1f2340',
-  flexShrink: 0,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 28,
-  padding: '0 8px',
-  borderRadius: 999,
-};
-
-const dayWeek: React.CSSProperties = {
-  fontSize: 12,
-  color: '#5b6285',
-  fontWeight: 700,
-};
-
-const sundayDateStyle: React.CSSProperties = {
-  fontWeight: 800,
-  color: '#dc2626',
-  flexShrink: 0,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 28,
-  padding: '0 8px',
-  borderRadius: 999,
-};
-
-const saturdayDateStyle: React.CSSProperties = {
   fontWeight: 800,
   color: '#2563eb',
-  flexShrink: 0,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 28,
-  padding: '0 8px',
-  borderRadius: 999,
-};
-
-const todayWeekDateStyle: React.CSSProperties = {
-  color: '#111827',
-  border: '2px solid #111827',
-  background: '#ffffff',
-};
-
-const weekHolidayInline: React.CSSProperties = {
-  minWidth: 0,
-  fontSize: 10,
-  fontWeight: 800,
-  color: '#b91c1c',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-};
-
-const sundayWeekStyle: React.CSSProperties = {
-  fontSize: 12,
-  color: '#dc2626',
-  fontWeight: 700,
-};
-
-const saturdayWeekStyle: React.CSSProperties = {
-  fontSize: 12,
-  color: '#2563eb',
-  fontWeight: 700,
-};
-
-const timeCell: React.CSSProperties = {
-  padding: '10px 8px',
-  borderBottom: '1px solid rgba(99,102,241,0.08)',
-  color: '#5b6285',
-  fontSize: 12,
-  background: '#fff',
-  fontWeight: 700,
 };
 
 const cell: React.CSSProperties = {
-  borderLeft: '1px solid rgba(99,102,241,0.08)',
-  borderBottom: '1px solid rgba(99,102,241,0.08)',
+  minHeight: 130,
   background: '#fff',
-  textAlign: 'left',
-  padding: 6,
-  minHeight: 76,
+  padding: 10,
+  display: 'grid',
+  gap: 8,
 };
 
 const sundayCell: React.CSSProperties = {
@@ -782,10 +723,55 @@ const saturdayCell: React.CSSProperties = {
   background: 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)',
 };
 
-const cellTop: React.CSSProperties = {
+const cellHeader: React.CSSProperties = {
   display: 'flex',
-  justifyContent: 'flex-end',
-  marginBottom: 6,
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: 6,
+};
+
+const dateInlineRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  minWidth: 0,
+  flexWrap: 'nowrap',
+};
+
+const dateStyle: React.CSSProperties = {
+  fontWeight: 800,
+  color: '#5b6285',
+  flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: 28,
+  height: 28,
+  borderRadius: 999,
+};
+
+const sundayDateStyle: React.CSSProperties = {
+  color: '#dc2626',
+};
+
+const saturdayDateStyle: React.CSSProperties = {
+  color: '#2563eb',
+};
+
+const todayDateStyle: React.CSSProperties = {
+  color: '#111827',
+  border: '2px solid #111827',
+  background: '#ffffff',
+};
+
+const holidayNameInline: React.CSSProperties = {
+  minWidth: 0,
+  fontSize: 10,
+  fontWeight: 800,
+  color: '#b91c1c',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
 
 const miniButton: React.CSSProperties = {
@@ -797,31 +783,29 @@ const miniButton: React.CSSProperties = {
   height: 28,
   cursor: 'pointer',
   fontWeight: 800,
+  flexShrink: 0,
+};
+
+const eventList: React.CSSProperties = {
+  display: 'grid',
+  gap: 6,
 };
 
 const eventItem: React.CSSProperties = {
   border: 'none',
-  width: '100%',
-  textAlign: 'left',
   borderRadius: 12,
-  padding: '8px 10px',
-  fontSize: 12,
-  display: 'grid',
-  gap: 3,
-  cursor: 'pointer',
   background: 'linear-gradient(135deg, #eef2ff 0%, #e9d5ff 100%)',
   color: '#312e81',
-  marginBottom: 6,
+  padding: '8px 10px',
+  cursor: 'pointer',
+  textAlign: 'left',
+  display: 'grid',
+  gap: 2,
 };
 
 const eventTitle: React.CSSProperties = {
   fontWeight: 800,
-};
-
-const eventTime: React.CSSProperties = {
-  fontSize: 11,
-  color: '#5b6285',
-  fontWeight: 700,
+  fontSize: 13,
 };
 
 const eventOwner: React.CSSProperties = {
@@ -857,19 +841,19 @@ const modalTitle: React.CSSProperties = {
 
 const formGrid: React.CSSProperties = {
   display: 'grid',
-  gap: 8,
+  gap: 11,
 };
 
 const label: React.CSSProperties = {
   display: 'grid',
-  gap: 4,
+  gap: 6,
   fontWeight: 700,
   color: '#394067',
 };
 
 const halfLabel: React.CSSProperties = {
   display: 'grid',
-  gap: 4,
+  gap: 6,
   fontWeight: 700,
   color: '#394067',
   flex: 1,
@@ -878,31 +862,31 @@ const halfLabel: React.CSSProperties = {
 
 const dateTimeRow: React.CSSProperties = {
   display: 'flex',
-  gap: 8,
+  gap: 10,
   flexWrap: 'wrap',
 };
 
 const dateInlineBox: React.CSSProperties = {
-  display: 'inline-flex',
+  display: 'flex',
   alignItems: 'center',
-  gap: 4,
-  width: 'fit-content',
-  maxWidth: '100%',
-  padding: '0 8px',
+  gap: 8,
+  width: '100%',
+  padding: '0 11px',
   border: '1px solid #d8dcef',
-  borderRadius: 10,
+  borderRadius: 11,
   boxSizing: 'border-box',
   background: '#fff',
-  minHeight: 36,
+  minHeight: 42,
 };
 
 const dateInlineInput: React.CSSProperties = {
-  width: 118,
+  flex: 1,
+  minWidth: 0,
   border: 'none',
   outline: 'none',
-  fontSize: 13,
+  fontSize: 14,
   background: 'transparent',
-  padding: '7px 0',
+  padding: '9px 0',
   boxSizing: 'border-box',
 };
 
@@ -916,19 +900,19 @@ const dateInlineWeekday: React.CSSProperties = {
 
 const input: React.CSSProperties = {
   width: '100%',
-  padding: '7px 10px',
+  padding: '9px 11px',
   border: '1px solid #d8dcef',
-  borderRadius: 10,
-  fontSize: 13,
+  borderRadius: 11,
+  fontSize: 14,
   boxSizing: 'border-box',
   background: '#fff',
-  minHeight: 36,
+  minHeight: 42,
 };
 
 const textarea: React.CSSProperties = {
   width: '100%',
-  minHeight: 150,
-  padding: '10px 11px',
+  minHeight: 80,
+  padding: '9px 11px',
   border: '1px solid #d8dcef',
   borderRadius: 11,
   fontSize: 14,
@@ -940,7 +924,7 @@ const textarea: React.CSSProperties = {
 const checkLabel: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 5,
+  gap: 6,
   fontWeight: 700,
   color: '#394067',
 };
@@ -949,6 +933,6 @@ const modalActions: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'flex-end',
   gap: 8,
-  marginTop: 10,
+  marginTop: 14,
   flexWrap: 'wrap',
 };
