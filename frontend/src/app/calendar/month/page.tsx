@@ -92,6 +92,15 @@ export default function CalendarMonthPage() {
       map.set(key, list);
     }
 
+    for (const list of map.values()) {
+      list.sort((a, b) => {
+        return (
+          new Date(a.startAt as string).getTime() -
+          new Date(b.startAt as string).getTime()
+        );
+      });
+    }
+
     return map;
   }, [normalizedEvents]);
 
@@ -305,7 +314,13 @@ export default function CalendarMonthPage() {
                             onClick={() => openEditModal(e)}
                             title={e.title}
                           >
-                            <div style={eventTitle}>{e.title}</div>
+                            <div style={eventTitleRow}>
+                              <span style={eventTitle}>{e.title}</span>
+                              <span style={eventStartTime}>
+                                {e.allDay ? '終日' : formatTime(new Date(e.startAt as string))}
+                              </span>
+                            </div>
+
                             {e.owner_name ? (
                               <div style={eventOwner}>担当: {e.owner_name}</div>
                             ) : null}
@@ -374,6 +389,12 @@ function toDateInputValue(date: Date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function formatTime(date: Date) {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
 }
 
 const wrap: React.CSSProperties = {
@@ -588,9 +609,27 @@ const eventItem: React.CSSProperties = {
   gap: 2,
 };
 
+const eventTitleRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 8,
+};
+
 const eventTitle: React.CSSProperties = {
   fontWeight: 800,
   fontSize: 13,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const eventStartTime: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 900,
+  color: '#5b6285',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
 };
 
 const eventOwner: React.CSSProperties = {
