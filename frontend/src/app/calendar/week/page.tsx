@@ -94,26 +94,42 @@ export default function CalendarWeekPage() {
   }, [events]);
 
   const eventsByDate = useMemo(() => {
-    const map = new Map<string, typeof normalizedEvents>();
+  const map = new Map<string, typeof normalizedEvents>();
 
-    for (const e of normalizedEvents) {
-      const key = formatLocalDateKey(new Date(e.startAt as string));
+  for (const e of normalizedEvents) {
+    const start = new Date(e.startAt as string);
+    const end = new Date(e.endAt as string);
+
+    // 日付ループ用
+    const current = new Date(start);
+    current.setHours(0, 0, 0, 0);
+
+    const last = new Date(end);
+    last.setHours(0, 0, 0, 0);
+
+    while (current.getTime() <= last.getTime()) {
+      const key = formatLocalDateKey(current);
+
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
-    }
 
-    for (const list of map.values()) {
-      list.sort((a, b) => {
-        return (
-          new Date(a.startAt as string).getTime() -
-          new Date(b.startAt as string).getTime()
-        );
-      });
+      current.setDate(current.getDate() + 1);
     }
+  }
 
-    return map;
-  }, [normalizedEvents]);
+  // ソート（そのまま）
+  for (const list of map.values()) {
+    list.sort((a, b) => {
+      return (
+        new Date(a.startAt as string).getTime() -
+        new Date(b.startAt as string).getTime()
+      );
+    });
+  }
+
+  return map;
+}, [normalizedEvents]);
 
   const openCreateModal = (date?: Date) => {
     const baseDate = date ? new Date(date) : new Date();
