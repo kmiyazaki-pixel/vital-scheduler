@@ -26,7 +26,10 @@ export default function CalendarMonthPage() {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EventFormState>(EMPTY_FORM);
-  const [expandedDateKeys, setExpandedDateKeys] = useState<Set<string>>(new Set());
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartKey, setDragStartKey] = useState<string | null>(null);
+  const [dragEndKey, setDragEndKey] = useState<string | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -44,6 +47,24 @@ export default function CalendarMonthPage() {
       return d;
     });
   }, [year, month]);
+
+  const selectedKeys = useMemo(() => {
+    if (!dragStartKey || !dragEndKey) return new Set<string>();
+
+    const start = new Date(dragStartKey).getTime();
+    const end = new Date(dragEndKey).getTime();
+    const min = Math.min(start, end);
+    const max = Math.max(start, end);
+
+    return new Set(
+      calendarDays
+        .filter((date) => {
+          const time = new Date(formatLocalDateKey(date)).getTime();
+          return time >= min && time <= max;
+        })
+        .map((date) => formatLocalDateKey(date)),
+    );
+  }, [calendarDays, dragStartKey, dragEndKey]);
 
   const loadEvents = async (y: number, m: number) => {
     try {
@@ -63,16 +84,12 @@ export default function CalendarMonthPage() {
   };
 
   useEffect(() => {
-    setExpandedDateKeys(new Set());
     loadEvents(year, month);
   }, [year, month]);
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
-
-  const goToday = () => {
-    setCurrentDate(new Date());
-  };
+  const goToday = () => setCurrentDate(new Date());
 
   const normalizedEvents = useMemo(() => {
     return events.map((e) => ({
@@ -94,28 +111,27 @@ export default function CalendarMonthPage() {
       map.set(key, list);
     }
 
-    for (const list of map.values()) {
-      list.sort((a, b) => {
-        return (
-          new Date(a.startAt as string).getTime() -
-          new Date(b.startAt as string).getTime()
-        );
-      });
-    }
-
     return map;
   }, [normalizedEvents]);
 
-  const openCreateModal = (date?: Date) => {
-    const baseDate = date ? new Date(date) : new Date(year, month, 1);
+  const openCreateModal = (startDate?: Date, endDate?: Date) => {
+    const start = startDate ? new Date(startDate) : new Date(year, month, 1);
+    const end = endDate ? new Date(endDate) : start;
+
+    const startTime = start.getTime();
+    const endTime = end.getTime();
+
+    const realStart = startTime <= endTime ? start : end;
+    const realEnd = startTime <= endTime ? end : start;
 
     setForm({
       ...EMPTY_FORM,
-      startDate: toDateInputValue(baseDate),
+      startDate: toDateInputValue(realStart),
       startTime: '09:00',
-      endDate: toDateInputValue(baseDate),
+      endDate: toDateInputValue(realEnd),
       endTime: '10:00',
     });
+
     setError(null);
     setModalOpen(true);
   };
@@ -130,6 +146,31 @@ export default function CalendarMonthPage() {
     if (saving) return;
     setModalOpen(false);
     setForm(EMPTY_FORM);
+  };
+
+  const startDrag = (date: Date) => {
+    const key = formatLocalDateKey(date);
+    setIsDragging(true);
+    setDragStartKey(key);
+    setDragEndKey(key);
+  };
+
+  const moveDrag = (date: Date) => {
+    if (!isDragging) return;
+    setDragEndKey(formatLocalDateKey(date));
+  };
+
+  const finishDrag = () => {
+    if (!isDragging || !dragStartKey || !dragEndKey) return;
+
+    const start = new Date(dragStartKey);
+    const end = new Date(dragEndKey);
+
+    setIsDragging(false);
+    setDragStartKey(null);
+    setDragEndKey(null);
+
+    openCreateModal(start, end);
   };
 
   const handleSave = async () => {
@@ -209,35 +250,15 @@ export default function CalendarMonthPage() {
     }
   };
 
-  const toggleExpandedDate = (key: string) => {
-    setExpandedDateKeys((prev) => {
-      const next = new Set(prev);
-
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-
-      return next;
-    });
-  };
-
   return (
     <SchedulerShell title="月表示">
       <div style={wrap}>
         <div style={toolbar}>
           <div style={toolbarLeft}>
-            <button style={button} onClick={prevMonth}>
-              前月
-            </button>
+            <button style={button} onClick={prevMonth}>前月</button>
             <h2 style={title}>{monthLabel}</h2>
-            <button style={button} onClick={nextMonth}>
-              次月
-            </button>
-            <button style={button} onClick={goToday}>
-              今日
-            </button>
+            <button style={button} onClick={nextMonth}>次月</button>
+            <button style={button} onClick={goToday}>今日</button>
           </div>
 
           <div style={toolbarRight}>
@@ -248,7 +269,6 @@ export default function CalendarMonthPage() {
         </div>
 
         {error && <div style={errorBox}>{error}</div>}
-
         {loading && <div style={loadingBox}>読み込み中...</div>}
 
         {!loading && (
@@ -257,11 +277,7 @@ export default function CalendarMonthPage() {
               <div style={grid}>
                 {['日', '月', '火', '水', '木', '金', '土'].map((d, index) => {
                   const headerStyle =
-                    index === 0
-                      ? sundayHeader
-                      : index === 6
-                        ? saturdayHeader
-                        : dayHeader;
+                    index === 0 ? sundayHeader : index === 6 ? saturdayHeader : dayHeader;
 
                   return (
                     <div key={d} style={headerStyle}>
@@ -275,12 +291,9 @@ export default function CalendarMonthPage() {
                   const dayEvents = eventsByDate.get(key) ?? [];
                   const isCurrent = date.getMonth() === month;
                   const isToday = key === todayKey;
+                  const isSelected = selectedKeys.has(key);
                   const dayType = getDayType(date);
                   const holidayName = getHolidayName(date);
-
-                  const expanded = expandedDateKeys.has(key);
-                  const visibleEvents = expanded ? dayEvents : dayEvents.slice(0, 3);
-                  const hiddenCount = Math.max(dayEvents.length - 3, 0);
 
                   const holidayCellStyle =
                     dayType === 'holiday' || dayType === 'sunday'
@@ -302,8 +315,15 @@ export default function CalendarMonthPage() {
                       style={{
                         ...cell,
                         ...holidayCellStyle,
+                        ...(isSelected ? selectedCell : {}),
                         opacity: isCurrent ? 1 : 0.45,
                       }}
+                      onMouseDown={(e) => {
+                        if (e.button !== 0) return;
+                        startDrag(date);
+                      }}
+                      onMouseEnter={() => moveDrag(date)}
+                      onMouseUp={finishDrag}
                     >
                       <div style={cellHeader}>
                         <div style={dateInlineRow}>
@@ -321,37 +341,30 @@ export default function CalendarMonthPage() {
                           ) : null}
                         </div>
 
-                        <button style={miniButton} onClick={() => openCreateModal(date)}>
+                        <button
+                          style={miniButton}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={() => openCreateModal(date)}
+                        >
                           ＋
                         </button>
                       </div>
 
                       <div style={eventList}>
-                        {visibleEvents.map((e) => (
+                        {dayEvents.map((e) => (
                           <button
                             key={e.id}
                             style={eventItem}
+                            onMouseDown={(event) => event.stopPropagation()}
                             onClick={() => openEditModal(e)}
                             title={e.title}
                           >
-                            <div style={eventTitleRow}>
-                              <span style={eventTitle}>{e.title}</span>
-                              <span style={eventStartTime}>
-                                {e.allDay ? '終日' : formatTime(new Date(e.startAt as string))}
-                              </span>
-                            </div>
-
+                            <div style={eventTitle}>{e.title}</div>
                             {e.owner_name ? (
                               <div style={eventOwner}>担当: {e.owner_name}</div>
                             ) : null}
                           </button>
                         ))}
-
-                        {hiddenCount > 0 && (
-                          <button style={moreButton} onClick={() => toggleExpandedDate(key)}>
-                            {expanded ? '閉じる' : `+${hiddenCount}`}
-                          </button>
-                        )}
                       </div>
                     </div>
                   );
@@ -415,12 +428,6 @@ function toDateInputValue(date: Date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
-}
-
-function formatTime(date: Date) {
-  const h = String(date.getHours()).padStart(2, '0');
-  const m = String(date.getMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
 }
 
 const wrap: React.CSSProperties = {
@@ -513,6 +520,7 @@ const grid: React.CSSProperties = {
   background: 'rgba(99,102,241,0.08)',
   borderRadius: 16,
   overflow: 'hidden',
+  userSelect: 'none',
 };
 
 const dayHeader: React.CSSProperties = {
@@ -544,8 +552,14 @@ const cell: React.CSSProperties = {
   background: '#fff',
   padding: 10,
   display: 'grid',
-  alignContent: 'start',
-  gap: 6,
+  gap: 8,
+  cursor: 'crosshair',
+};
+
+const selectedCell: React.CSSProperties = {
+  outline: '2px solid #6366f1',
+  outlineOffset: '-2px',
+  background: 'linear-gradient(180deg, #eef2ff 0%, #ede9fe 100%)',
 };
 
 const sundayCell: React.CSSProperties = {
@@ -621,64 +635,28 @@ const miniButton: React.CSSProperties = {
 
 const eventList: React.CSSProperties = {
   display: 'grid',
-  gap: 4,
+  gap: 6,
 };
 
 const eventItem: React.CSSProperties = {
   border: 'none',
-  borderRadius: 8,
+  borderRadius: 12,
   background: 'linear-gradient(135deg, #eef2ff 0%, #e9d5ff 100%)',
   color: '#312e81',
-  padding: '4px 7px',
+  padding: '8px 10px',
   cursor: 'pointer',
   textAlign: 'left',
   display: 'grid',
-  gap: 1,
-  minHeight: 34,
-};
-
-const eventTitleRow: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 6,
-  minWidth: 0,
+  gap: 2,
 };
 
 const eventTitle: React.CSSProperties = {
   fontWeight: 800,
-  fontSize: 12,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-};
-
-const eventStartTime: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: 900,
-  color: '#5b6285',
-  whiteSpace: 'nowrap',
-  flexShrink: 0,
+  fontSize: 13,
 };
 
 const eventOwner: React.CSSProperties = {
-  fontSize: 10,
+  fontSize: 11,
   color: '#5b6285',
   fontWeight: 700,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-};
-
-const moreButton: React.CSSProperties = {
-  justifySelf: 'end',
-  border: 'none',
-  borderRadius: 8,
-  background: '#ffffff',
-  color: '#1f2340',
-  padding: '3px 7px',
-  cursor: 'pointer',
-  fontSize: 11,
-  fontWeight: 900,
-  boxShadow: '0 3px 8px rgba(15, 23, 42, 0.12)',
 };
