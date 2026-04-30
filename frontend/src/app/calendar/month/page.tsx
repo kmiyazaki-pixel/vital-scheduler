@@ -204,7 +204,8 @@ export default function CalendarMonthPage() {
     return normalizedEvents.filter((e) => {
       const startKey = formatLocalDateKey(new Date(e.startAt));
       const endKey = formatLocalDateKey(new Date(e.endAt));
-      return e.allDay && endKey > startKey;
+      
+      return endKey > startKey;
     });
   }, [normalizedEvents]);
 
@@ -213,7 +214,7 @@ export default function CalendarMonthPage() {
     for (const e of normalizedEvents) {
       const startKey = formatLocalDateKey(new Date(e.startAt));
       const endKey = formatLocalDateKey(new Date(e.endAt));
-      if (e.allDay && endKey > startKey) continue;
+      if (endKey > startKey) continue;
       const list = map.get(startKey) ?? [];
       list.push(e);
       map.set(startKey, list);
@@ -559,8 +560,13 @@ setForm(buildFormFromEvent({
                         title={band.event.title}
                       >
                         {(band.isStart || band.colStart === 0) && (
-                          <span style={spanBandTitle}>{band.event.title}</span>
-                        )}
+  <>
+    <span style={spanBandTime}>
+      {band.event.allDay ? '終日' : formatTime(new Date(band.event.startAt))}
+    </span>
+    <span style={spanBandTitle}>{band.event.title}</span>
+  </>
+)}
                       </button>
                     );
                   })}
@@ -795,6 +801,12 @@ const moreLabel: React.CSSProperties = {
 };
 const spanBandTitle: React.CSSProperties = {
   fontSize: 11, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+};
+const spanBandTime: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 900,
+  marginRight: 6,
+  flexShrink: 0,
 };
 const selectionIndicator: React.CSSProperties = {
   position: 'fixed',
