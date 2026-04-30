@@ -312,12 +312,12 @@ const openEditModal = (event: NormalizedEvent) => {
       ? event.id
       : Number(event.id);
 
-  const category = event.category ?? "仕事";
+  const category = (event.category ?? "仕事") as EventItem["category"];
 
 setForm(buildFormFromEvent({
   ...event,
   id: Number.isFinite(eventId) ? eventId : 0,
-  category: category as NormalizedEvent["category"],
+  category,
   calendar_id: calendarId,
   start_at: event.startAt ?? event.start_at,
   end_at: event.endAt ?? event.end_at,
