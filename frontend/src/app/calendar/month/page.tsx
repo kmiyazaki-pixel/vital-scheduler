@@ -27,9 +27,9 @@ export default function CalendarMonthPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EventFormState>(EMPTY_FORM);
 
-  const [isDragging, setIsDragging] = useState(false);
   const [dragStartKey, setDragStartKey] = useState<string | null>(null);
   const [dragEndKey, setDragEndKey] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -47,24 +47,6 @@ export default function CalendarMonthPage() {
       return d;
     });
   }, [year, month]);
-
-  const selectedKeys = useMemo(() => {
-    if (!dragStartKey || !dragEndKey) return new Set<string>();
-
-    const start = new Date(dragStartKey).getTime();
-    const end = new Date(dragEndKey).getTime();
-    const min = Math.min(start, end);
-    const max = Math.max(start, end);
-
-    return new Set(
-      calendarDays
-        .filter((date) => {
-          const time = new Date(formatLocalDateKey(date)).getTime();
-          return time >= min && time <= max;
-        })
-        .map((date) => formatLocalDateKey(date)),
-    );
-  }, [calendarDays, dragStartKey, dragEndKey]);
 
   const loadEvents = async (y: number, m: number) => {
     try {
@@ -89,7 +71,10 @@ export default function CalendarMonthPage() {
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
-  const goToday = () => setCurrentDate(new Date());
+
+  const goToday = () => {
+    setCurrentDate(new Date());
+  };
 
   const normalizedEvents = useMemo(() => {
     return events.map((e) => ({
@@ -104,34 +89,33 @@ export default function CalendarMonthPage() {
   const eventsByDate = useMemo(() => {
     const map = new Map<string, typeof normalizedEvents>();
 
-    for (const e of normalizedEvents) {
-      const key = formatLocalDateKey(new Date(e.startAt as string));
-      const list = map.get(key) ?? [];
-      list.push(e);
+    for (const date of calendarDays) {
+      const key = formatLocalDateKey(date);
+
+      const list = normalizedEvents.filter((event) => {
+        const startKey = formatLocalDateKey(new Date(event.startAt as string));
+        const endKey = formatLocalDateKey(new Date(event.endAt as string));
+
+        return key >= startKey && key <= endKey;
+      });
+
       map.set(key, list);
     }
 
     return map;
-  }, [normalizedEvents]);
+  }, [calendarDays, normalizedEvents]);
 
   const openCreateModal = (startDate?: Date, endDate?: Date) => {
-    const start = startDate ? new Date(startDate) : new Date(year, month, 1);
-    const end = endDate ? new Date(endDate) : start;
-
-    const startTime = start.getTime();
-    const endTime = end.getTime();
-
-    const realStart = startTime <= endTime ? start : end;
-    const realEnd = startTime <= endTime ? end : start;
+    const baseStartDate = startDate ? new Date(startDate) : new Date(year, month, 1);
+    const baseEndDate = endDate ? new Date(endDate) : new Date(baseStartDate);
 
     setForm({
       ...EMPTY_FORM,
-      startDate: toDateInputValue(realStart),
+      startDate: toDateInputValue(baseStartDate),
       startTime: '09:00',
-      endDate: toDateInputValue(realEnd),
+      endDate: toDateInputValue(baseEndDate),
       endTime: '10:00',
     });
-
     setError(null);
     setModalOpen(true);
   };
@@ -148,29 +132,32 @@ export default function CalendarMonthPage() {
     setForm(EMPTY_FORM);
   };
 
-  const startDrag = (date: Date) => {
+  const handleDragStart = (date: Date) => {
     const key = formatLocalDateKey(date);
-    setIsDragging(true);
     setDragStartKey(key);
     setDragEndKey(key);
+    setIsDragging(true);
   };
 
-  const moveDrag = (date: Date) => {
+  const handleDragEnter = (date: Date) => {
     if (!isDragging) return;
     setDragEndKey(formatLocalDateKey(date));
   };
 
-  const finishDrag = () => {
-    if (!isDragging || !dragStartKey || !dragEndKey) return;
+  const handleDragEnd = () => {
+    if (!isDragging || !dragStartKey || !dragEndKey) {
+      setIsDragging(false);
+      return;
+    }
 
-    const start = new Date(dragStartKey);
-    const end = new Date(dragEndKey);
+    const startKey = dragStartKey <= dragEndKey ? dragStartKey : dragEndKey;
+    const endKey = dragStartKey <= dragEndKey ? dragEndKey : dragStartKey;
 
     setIsDragging(false);
     setDragStartKey(null);
     setDragEndKey(null);
 
-    openCreateModal(start, end);
+    openCreateModal(parseDateKey(startKey), parseDateKey(endKey));
   };
 
   const handleSave = async () => {
@@ -252,23 +239,24 @@ export default function CalendarMonthPage() {
 
   return (
     <SchedulerShell title="月表示">
-      <div style={wrap}>
+      <div style={wrap} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd}>
         <div style={toolbar}>
           <div style={toolbarLeft}>
-            <button style={button} onClick={prevMonth}>前月</button>
+            <button style={button} onClick={prevMonth}>
+              前月
+            </button>
             <h2 style={title}>{monthLabel}</h2>
-            <button style={button} onClick={nextMonth}>次月</button>
-            <button style={button} onClick={goToday}>今日</button>
-          </div>
-
-          <div style={toolbarRight}>
-            <button style={primaryButton} onClick={() => openCreateModal()}>
-              予定を追加
+            <button style={button} onClick={nextMonth}>
+              次月
+            </button>
+            <button style={button} onClick={goToday}>
+              今日
             </button>
           </div>
         </div>
 
         {error && <div style={errorBox}>{error}</div>}
+
         {loading && <div style={loadingBox}>読み込み中...</div>}
 
         {!loading && (
@@ -277,7 +265,11 @@ export default function CalendarMonthPage() {
               <div style={grid}>
                 {['日', '月', '火', '水', '木', '金', '土'].map((d, index) => {
                   const headerStyle =
-                    index === 0 ? sundayHeader : index === 6 ? saturdayHeader : dayHeader;
+                    index === 0
+                      ? sundayHeader
+                      : index === 6
+                        ? saturdayHeader
+                        : dayHeader;
 
                   return (
                     <div key={d} style={headerStyle}>
@@ -291,7 +283,6 @@ export default function CalendarMonthPage() {
                   const dayEvents = eventsByDate.get(key) ?? [];
                   const isCurrent = date.getMonth() === month;
                   const isToday = key === todayKey;
-                  const isSelected = selectedKeys.has(key);
                   const dayType = getDayType(date);
                   const holidayName = getHolidayName(date);
 
@@ -309,21 +300,23 @@ export default function CalendarMonthPage() {
                         ? saturdayDateStyle
                         : {};
 
+                  const selected =
+                    dragStartKey &&
+                    dragEndKey &&
+                    key >= (dragStartKey <= dragEndKey ? dragStartKey : dragEndKey) &&
+                    key <= (dragStartKey <= dragEndKey ? dragEndKey : dragStartKey);
+
                   return (
                     <div
                       key={key}
                       style={{
                         ...cell,
                         ...holidayCellStyle,
-                        ...(isSelected ? selectedCell : {}),
+                        ...(selected ? selectedCell : {}),
                         opacity: isCurrent ? 1 : 0.45,
                       }}
-                      onMouseDown={(e) => {
-                        if (e.button !== 0) return;
-                        startDrag(date);
-                      }}
-                      onMouseEnter={() => moveDrag(date)}
-                      onMouseUp={finishDrag}
+                      onMouseDown={() => handleDragStart(date)}
+                      onMouseEnter={() => handleDragEnter(date)}
                     >
                       <div style={cellHeader}>
                         <div style={dateInlineRow}>
@@ -340,23 +333,18 @@ export default function CalendarMonthPage() {
                             <span style={holidayNameInline}>{holidayName}</span>
                           ) : null}
                         </div>
-
-                        <button
-                          style={miniButton}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onClick={() => openCreateModal(date)}
-                        >
-                          ＋
-                        </button>
                       </div>
 
                       <div style={eventList}>
                         {dayEvents.map((e) => (
                           <button
-                            key={e.id}
+                            key={`${key}-${e.id}`}
                             style={eventItem}
-                            onMouseDown={(event) => event.stopPropagation()}
-                            onClick={() => openEditModal(e)}
+                            onMouseDown={(ev) => ev.stopPropagation()}
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              openEditModal(e);
+                            }}
                             title={e.title}
                           >
                             <div style={eventTitle}>{e.title}</div>
@@ -409,6 +397,11 @@ function buildLocalIso(date: string, time: string) {
   return localDate.toISOString();
 }
 
+function parseDateKey(key: string) {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function formatDateParam(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -449,13 +442,6 @@ const toolbarLeft: React.CSSProperties = {
   gap: 12,
 };
 
-const toolbarRight: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 12,
-  flexWrap: 'wrap',
-};
-
 const title: React.CSSProperties = {
   margin: 0,
   fontSize: 24,
@@ -469,17 +455,6 @@ const button: React.CSSProperties = {
   padding: '10px 14px',
   cursor: 'pointer',
   fontWeight: 700,
-};
-
-const primaryButton: React.CSSProperties = {
-  border: 'none',
-  borderRadius: 12,
-  background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
-  color: '#fff',
-  padding: '10px 16px',
-  cursor: 'pointer',
-  fontWeight: 800,
-  boxShadow: '0 8px 18px rgba(99, 102, 241, 0.22)',
 };
 
 const errorBox: React.CSSProperties = {
@@ -520,7 +495,6 @@ const grid: React.CSSProperties = {
   background: 'rgba(99,102,241,0.08)',
   borderRadius: 16,
   overflow: 'hidden',
-  userSelect: 'none',
 };
 
 const dayHeader: React.CSSProperties = {
@@ -553,13 +527,15 @@ const cell: React.CSSProperties = {
   padding: 10,
   display: 'grid',
   gap: 8,
+  alignContent: 'start',
   cursor: 'crosshair',
+  userSelect: 'none',
 };
 
 const selectedCell: React.CSSProperties = {
-  outline: '2px solid #6366f1',
-  outlineOffset: '-2px',
-  background: 'linear-gradient(180deg, #eef2ff 0%, #ede9fe 100%)',
+  outline: '3px solid rgba(99, 102, 241, 0.35)',
+  outlineOffset: -3,
+  background: '#eef2ff',
 };
 
 const sundayCell: React.CSSProperties = {
@@ -619,18 +595,6 @@ const holidayNameInline: React.CSSProperties = {
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
-};
-
-const miniButton: React.CSSProperties = {
-  border: 'none',
-  borderRadius: 10,
-  background: 'linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%)',
-  color: '#166534',
-  width: 28,
-  height: 28,
-  cursor: 'pointer',
-  fontWeight: 800,
-  flexShrink: 0,
 };
 
 const eventList: React.CSSProperties = {
