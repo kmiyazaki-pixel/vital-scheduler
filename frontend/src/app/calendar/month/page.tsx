@@ -302,11 +302,12 @@ export default function CalendarMonthPage() {
   const openEditModal = (event: NormalizedEvent) => {
   setForm(buildFormFromEvent({
     ...event,
-    calendar_id: event.calendarId,
-    start_at: event.startAt,
-    end_at: event.endAt,
-    is_all_day: event.allDay,
+    calendar_id: event.calendarId ?? event.calendar_id ?? 1,
+    start_at: event.startAt ?? event.start_at,
+    end_at: event.endAt ?? event.end_at,
+    is_all_day: event.allDay ?? event.is_all_day ?? false,
   }));
+
   setError(null);
   setModalOpen(true);
 };
