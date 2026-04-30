@@ -189,14 +189,15 @@ export default function CalendarMonthPage() {
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
   const normalizedEvents = useMemo<NormalizedEvent[]>(() => {
-    return events.map((e) => ({
-      ...e,
-      calendarId: e.calendarId ?? e.calendar_id,
-      startAt: (e.startAt ?? e.start_at) as string,
-      endAt: (e.endAt ?? e.end_at) as string,
-      allDay: e.allDay ?? e.is_all_day ?? false,
-    }));
-  }, [events]);
+  return events.map((e) => ({
+    ...e,
+    memo: e.memo ?? undefined,
+    calendarId: e.calendarId ?? e.calendar_id,
+    startAt: e.startAt ?? e.start_at,
+    endAt: e.endAt ?? e.end_at,
+    allDay: e.allDay ?? e.is_all_day,
+  }))
+}, [events])
 
   const multiDayEvents = useMemo(() => {
     return normalizedEvents.filter((e) => {
