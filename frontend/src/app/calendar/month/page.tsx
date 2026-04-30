@@ -300,9 +300,16 @@ export default function CalendarMonthPage() {
   };
 
   const openEditModal = (event: NormalizedEvent) => {
+  const calendarId =
+    typeof event.calendarId === "number"
+      ? event.calendarId
+      : typeof event.calendar_id === "number"
+        ? event.calendar_id
+        : 1;
+
   setForm(buildFormFromEvent({
     ...event,
-    calendar_id: event.calendarId ?? event.calendar_id ?? 1,
+    calendar_id: calendarId,
     start_at: event.startAt ?? event.start_at,
     end_at: event.endAt ?? event.end_at,
     is_all_day: event.allDay ?? event.is_all_day ?? false,
