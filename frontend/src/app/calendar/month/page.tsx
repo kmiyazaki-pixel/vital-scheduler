@@ -299,7 +299,7 @@ export default function CalendarMonthPage() {
     setModalOpen(true);
   };
 
- const openEditModal = (event: NormalizedEvent) => {
+const openEditModal = (event: NormalizedEvent) => {
   const calendarId =
     typeof event.calendarId === "number"
       ? event.calendarId
@@ -312,9 +312,12 @@ export default function CalendarMonthPage() {
       ? event.id
       : Number(event.id);
 
+  const category = event.category ?? "仕事";
+
   setForm(buildFormFromEvent({
     ...event,
     id: Number.isFinite(eventId) ? eventId : 0,
+    category,
     calendar_id: calendarId,
     start_at: event.startAt ?? event.start_at,
     end_at: event.endAt ?? event.end_at,
