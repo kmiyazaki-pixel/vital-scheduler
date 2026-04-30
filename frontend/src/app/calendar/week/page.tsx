@@ -309,23 +309,23 @@ export default function CalendarWeekPage() {
                           ) : (
                             dayEvents.map((e) => (
                               <button
-  key={e.id}
-  style={eventItem}
-  onClick={() => openEditModal(e)}
-  title={e.title}
->
-  <span style={eventTime}>
-    {e.allDay ? '終日' : formatTime(new Date(e.startAt as string))}
-  </span>
-
-  <span style={eventTitle}>
-    {e.title}
-  </span>
-
-  {e.owner_name ? (
-    <span style={eventOwner}>{e.owner_name}</span>
-  ) : null}
-</button>
+                                key={e.id}
+                                style={eventItem}
+                                onClick={() => openEditModal(e)}
+                                title={e.title}
+                              >
+                                <div style={eventTime}>
+                                  {e.allDay
+                                    ? '終日'
+                                    : `${formatTime(new Date(e.startAt as string))} - ${formatTime(
+                                        new Date(e.endAt as string),
+                                      )}`}
+                                </div>
+                                <div style={eventTitle}>{e.title}</div>
+                                {e.owner_name ? (
+                                  <div style={eventOwner}>担当: {e.owner_name}</div>
+                                ) : null}
+                              </button>
                             ))
                           )}
                         </div>
@@ -641,40 +641,29 @@ const emptyText: React.CSSProperties = {
 
 const eventItem: React.CSSProperties = {
   border: 'none',
-  borderRadius: 8,
-  background: 'linear-gradient(90deg, #ede9fe 0%, #ddd6fe 100%)',
-  color: '#1e1b4b',
-  padding: '4px 8px',
+  borderRadius: 12,
+  background: 'linear-gradient(135deg, #eef2ff 0%, #e9d5ff 100%)',
+  color: '#312e81',
+  padding: '8px 10px',
   cursor: 'pointer',
   textAlign: 'left',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  minHeight: 28,
-  width: '100%',
-  overflow: 'hidden',
-  boxShadow: 'none',
+  display: 'grid',
+  gap: 3,
 };
 
 const eventTime: React.CSSProperties = {
-  fontSize: 12,
-  color: '#374151',
-  fontWeight: 900,
-  flexShrink: 0,
+  fontSize: 11,
+  color: '#5b6285',
+  fontWeight: 800,
 };
 
 const eventTitle: React.CSSProperties = {
   fontWeight: 900,
   fontSize: 13,
-  color: '#1e1b4b',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
 };
 
 const eventOwner: React.CSSProperties = {
-  fontSize: 12,
-  color: '#1e1b4b',
-  fontWeight: 900,
-  flexShrink: 0,
+  fontSize: 11,
+  color: '#5b6285',
+  fontWeight: 700,
 };
