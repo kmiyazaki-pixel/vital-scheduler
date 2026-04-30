@@ -17,6 +17,18 @@ import { useEffect, useMemo, useState } from 'react';
 
 const FIXED_CALENDAR_ID = 1;
 
+type NormalizedEvent = EventItem & {
+  calendarId?: number;
+  calendar_id?: number;
+  startAt?: string;
+  start_at?: string;
+  endAt?: string;
+  end_at?: string;
+  allDay?: boolean;
+  is_all_day?: boolean;
+  owner_name?: string;
+};
+
 export default function CalendarMonthPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -29,9 +41,9 @@ export default function CalendarMonthPage() {
     new Set(),
   );
 
+  const [isDraggingRange, setIsDraggingRange] = useState(false);
   const [dragStartKey, setDragStartKey] = useState<string | null>(null);
   const [dragEndKey, setDragEndKey] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -76,8 +88,8 @@ export default function CalendarMonthPage() {
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const goToday = () => setCurrentDate(new Date());
 
-  const normalizedEvents = useMemo(() => {
-    return events.map((e: any) => ({
+  const normalizedEvents = useMemo<NormalizedEvent[]>(() => {
+    return events.map((e: NormalizedEvent) => ({
       ...e,
       calendarId: e.calendarId ?? e.calendar_id,
       startAt: e.startAt ?? e.start_at,
@@ -87,10 +99,12 @@ export default function CalendarMonthPage() {
   }, [events]);
 
   const eventsByDate = useMemo(() => {
-    const map = new Map<string, typeof normalizedEvents>();
+    const map = new Map<string, NormalizedEvent[]>();
 
     for (const e of normalizedEvents) {
-      const key = formatLocalDateKey(new Date(e.startAt as string));
+      if (!e.startAt) continue;
+
+      const key = formatLocalDateKey(new Date(e.startAt));
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
@@ -140,7 +154,7 @@ export default function CalendarMonthPage() {
     setModalOpen(true);
   };
 
-  const openEditModal = (event: (typeof normalizedEvents)[number]) => {
+  const openEditModal = (event: NormalizedEvent) => {
     setForm(buildFormFromEvent(event));
     setError(null);
     setModalOpen(true);
@@ -164,26 +178,32 @@ export default function CalendarMonthPage() {
   };
 
   const startRangeDrag = (key: string) => {
-    setIsDragging(true);
+    setIsDraggingRange(true);
     setDragStartKey(key);
     setDragEndKey(key);
   };
 
   const moveRangeDrag = (key: string) => {
-    if (!isDragging) return;
+    if (!isDraggingRange) return;
     setDragEndKey(key);
   };
 
+  const clearRangeDrag = () => {
+    setIsDraggingRange(false);
+    setDragStartKey(null);
+    setDragEndKey(null);
+  };
+
   const finishRangeDrag = () => {
-    if (!isDragging || !dragStartKey || !dragEndKey) return;
+    if (!isDraggingRange || !dragStartKey || !dragEndKey) {
+      clearRangeDrag();
+      return;
+    }
 
     const start = dragStartKey;
     const end = dragEndKey;
 
-    setIsDragging(false);
-    setDragStartKey(null);
-    setDragEndKey(null);
-
+    clearRangeDrag();
     openCreateRangeModal(start, end);
   };
 
@@ -279,7 +299,7 @@ export default function CalendarMonthPage() {
   };
 
   return (
-    <SchedulerShell title="月表示">
+    <SchedulerShell>
       <div style={wrap}>
         <div style={toolbar}>
           <div style={toolbarLeft}>
@@ -299,6 +319,10 @@ export default function CalendarMonthPage() {
           </div>
 
           <div style={toolbarRight}>
+            <span style={hintText}>
+              日付をドラッグすると期間を選択できます
+            </span>
+
             <button style={primaryButton} onClick={() => openCreateModal()}>
               予定を追加
             </button>
@@ -310,7 +334,12 @@ export default function CalendarMonthPage() {
         {loading && <div style={loadingBox}>読み込み中...</div>}
 
         {!loading && (
-          <div style={calendarScrollWrap}>
+          <div
+            style={calendarScrollWrap}
+            onPointerLeave={() => {
+              if (isDraggingRange) clearRangeDrag();
+            }}
+          >
             <div style={calendarCard}>
               <div style={grid}>
                 {['日', '月', '火', '水', '木', '金', '土'].map(
@@ -364,16 +393,17 @@ export default function CalendarMonthPage() {
                       style={{
                         ...cell,
                         ...holidayCellStyle,
-                        ...(isToday ? todayCell : {}),
                         ...(!isCurrent ? mutedCell : {}),
                         ...(selected ? selectedCell : {}),
                       }}
                       onPointerDown={(e) => {
                         if (e.button !== 0) return;
+                        e.preventDefault();
                         startRangeDrag(key);
                       }}
                       onPointerEnter={() => moveRangeDrag(key)}
                       onPointerUp={finishRangeDrag}
+                      onPointerCancel={clearRangeDrag}
                     >
                       <div style={cellHeader}>
                         <div style={dateInlineRow}>
@@ -460,7 +490,6 @@ export default function CalendarMonthPage() {
           open={modalOpen}
           form={form}
           saving={saving}
-          error={error}
           onChange={setForm}
           onClose={closeModal}
           onSave={handleSave}
@@ -578,6 +607,12 @@ const primaryButton: React.CSSProperties = {
   boxShadow: '0 8px 18px rgba(99, 102, 241, 0.22)',
 };
 
+const hintText: React.CSSProperties = {
+  color: '#6b7280',
+  fontSize: 12,
+  fontWeight: 700,
+};
+
 const errorBox: React.CSSProperties = {
   color: '#b42318',
   fontSize: 13,
@@ -616,6 +651,7 @@ const grid: React.CSSProperties = {
   background: 'rgba(99,102,241,0.08)',
   borderRadius: 16,
   overflow: 'hidden',
+  userSelect: 'none',
 };
 
 const dayHeader: React.CSSProperties = {
@@ -649,7 +685,7 @@ const cell: React.CSSProperties = {
   display: 'grid',
   alignContent: 'start',
   gap: 6,
-  userSelect: 'none',
+  cursor: 'crosshair',
   touchAction: 'none',
 };
 
@@ -661,10 +697,6 @@ const selectedCell: React.CSSProperties = {
 
 const mutedCell: React.CSSProperties = {
   opacity: 0.45,
-};
-
-const todayCell: React.CSSProperties = {
-  boxShadow: 'inset 0 0 0 2px rgba(17, 24, 39, 0.18)',
 };
 
 const sundayCell: React.CSSProperties = {
