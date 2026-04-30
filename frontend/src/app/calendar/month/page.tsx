@@ -299,7 +299,7 @@ export default function CalendarMonthPage() {
   };
 
   return (
-    <SchedulerShell>
+    <SchedulerShell title="月表示">
       <div style={wrap}>
         <div style={toolbar}>
           <div style={toolbarLeft}>
