@@ -192,6 +192,7 @@ export default function CalendarMonthPage() {
   return events.map((e) => ({
     ...e,
     memo: e.memo ?? undefined,
+    owner_name: e.owner_name ?? undefined,
     calendarId: e.calendarId ?? e.calendar_id,
     startAt: e.startAt ?? e.start_at,
     endAt: e.endAt ?? e.end_at,
