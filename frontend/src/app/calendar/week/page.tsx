@@ -494,6 +494,12 @@ function formatDateLabel(date: Date) {
   return `${y}/${m}/${d}`;
 }
 
+function formatTime(date: Date) {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 const wrap: React.CSSProperties = {
   display: 'grid',
   gap: 16,
