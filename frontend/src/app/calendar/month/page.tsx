@@ -2,6 +2,7 @@
 
 import EventFormModal, {
   EMPTY_FORM,
+  EventFormState,
   buildFormFromEvent,
 } from '@/components/EventFormModal';
 import SchedulerShell from '@/components/SchedulerShell';
@@ -24,14 +25,8 @@ export default function CalendarMonthPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [expandedDateKeys, setExpandedDateKeys] = useState<Set<string>>(
-    new Set(),
-  );
-
-  const [dragStartKey, setDragStartKey] = useState<string | null>(null);
-  const [dragEndKey, setDragEndKey] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [form, setForm] = useState<EventFormState>(EMPTY_FORM);
+  const [expandedDateKeys, setExpandedDateKeys] = useState<Set<string>>(new Set());
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -74,10 +69,13 @@ export default function CalendarMonthPage() {
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
-  const goToday = () => setCurrentDate(new Date());
+
+  const goToday = () => {
+    setCurrentDate(new Date());
+  };
 
   const normalizedEvents = useMemo(() => {
-    return events.map((e: any) => ({
+    return events.map((e) => ({
       ...e,
       calendarId: e.calendarId ?? e.calendar_id,
       startAt: e.startAt ?? e.start_at,
@@ -118,24 +116,6 @@ export default function CalendarMonthPage() {
       endDate: toDateInputValue(baseDate),
       endTime: '10:00',
     });
-
-    setError(null);
-    setModalOpen(true);
-  };
-
-  const openCreateRangeModal = (startKey: string, endKey: string) => {
-    const [start, end] =
-      startKey <= endKey ? [startKey, endKey] : [endKey, startKey];
-
-    setForm({
-      ...EMPTY_FORM,
-      startDate: start,
-      startTime: '09:00',
-      endDate: end,
-      endTime: '18:00',
-      allDay: true,
-    });
-
     setError(null);
     setModalOpen(true);
   };
@@ -150,41 +130,6 @@ export default function CalendarMonthPage() {
     if (saving) return;
     setModalOpen(false);
     setForm(EMPTY_FORM);
-  };
-
-  const isInDragRange = (key: string) => {
-    if (!dragStartKey || !dragEndKey) return false;
-
-    const [start, end] =
-      dragStartKey <= dragEndKey
-        ? [dragStartKey, dragEndKey]
-        : [dragEndKey, dragStartKey];
-
-    return key >= start && key <= end;
-  };
-
-  const startRangeDrag = (key: string) => {
-    setIsDragging(true);
-    setDragStartKey(key);
-    setDragEndKey(key);
-  };
-
-  const moveRangeDrag = (key: string) => {
-    if (!isDragging) return;
-    setDragEndKey(key);
-  };
-
-  const finishRangeDrag = () => {
-    if (!isDragging || !dragStartKey || !dragEndKey) return;
-
-    const start = dragStartKey;
-    const end = dragEndKey;
-
-    setIsDragging(false);
-    setDragStartKey(null);
-    setDragEndKey(null);
-
-    openCreateRangeModal(start, end);
   };
 
   const handleSave = async () => {
@@ -286,13 +231,10 @@ export default function CalendarMonthPage() {
             <button style={button} onClick={prevMonth}>
               前月
             </button>
-
             <h2 style={title}>{monthLabel}</h2>
-
             <button style={button} onClick={nextMonth}>
               次月
             </button>
-
             <button style={button} onClick={goToday}>
               今日
             </button>
@@ -313,22 +255,20 @@ export default function CalendarMonthPage() {
           <div style={calendarScrollWrap}>
             <div style={calendarCard}>
               <div style={grid}>
-                {['日', '月', '火', '水', '木', '金', '土'].map(
-                  (d, index) => {
-                    const headerStyle =
-                      index === 0
-                        ? sundayHeader
-                        : index === 6
-                          ? saturdayHeader
-                          : dayHeader;
+                {['日', '月', '火', '水', '木', '金', '土'].map((d, index) => {
+                  const headerStyle =
+                    index === 0
+                      ? sundayHeader
+                      : index === 6
+                        ? saturdayHeader
+                        : dayHeader;
 
-                    return (
-                      <div key={d} style={headerStyle}>
-                        {d}
-                      </div>
-                    );
-                  },
-                )}
+                  return (
+                    <div key={d} style={headerStyle}>
+                      {d}
+                    </div>
+                  );
+                })}
 
                 {calendarDays.map((date) => {
                   const key = formatLocalDateKey(date);
@@ -337,12 +277,10 @@ export default function CalendarMonthPage() {
                   const isToday = key === todayKey;
                   const dayType = getDayType(date);
                   const holidayName = getHolidayName(date);
+
                   const expanded = expandedDateKeys.has(key);
-                  const visibleEvents = expanded
-                    ? dayEvents
-                    : dayEvents.slice(0, 3);
+                  const visibleEvents = expanded ? dayEvents : dayEvents.slice(0, 3);
                   const hiddenCount = Math.max(dayEvents.length - 3, 0);
-                  const selected = isInDragRange(key);
 
                   const holidayCellStyle =
                     dayType === 'holiday' || dayType === 'sunday'
@@ -364,16 +302,8 @@ export default function CalendarMonthPage() {
                       style={{
                         ...cell,
                         ...holidayCellStyle,
-                        ...(isToday ? todayCell : {}),
-                        ...(!isCurrent ? mutedCell : {}),
-                        ...(selected ? selectedCell : {}),
+                        opacity: isCurrent ? 1 : 0.45,
                       }}
-                      onPointerDown={(e) => {
-                        if (e.button !== 0) return;
-                        startRangeDrag(key);
-                      }}
-                      onPointerEnter={() => moveRangeDrag(key)}
-                      onPointerUp={finishRangeDrag}
                     >
                       <div style={cellHeader}>
                         <div style={dateInlineRow}>
@@ -386,22 +316,12 @@ export default function CalendarMonthPage() {
                           >
                             {date.getDate()}
                           </span>
-
                           {holidayName ? (
-                            <span style={holidayNameInline}>
-                              {holidayName}
-                            </span>
+                            <span style={holidayNameInline}>{holidayName}</span>
                           ) : null}
                         </div>
 
-                        <button
-                          style={miniButton}
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openCreateModal(date);
-                          }}
-                        >
+                        <button style={miniButton} onClick={() => openCreateModal(date)}>
                           ＋
                         </button>
                       </div>
@@ -411,39 +331,24 @@ export default function CalendarMonthPage() {
                           <button
                             key={e.id}
                             style={eventItem}
-                            onPointerDown={(ev) => ev.stopPropagation()}
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              openEditModal(e);
-                            }}
+                            onClick={() => openEditModal(e)}
                             title={e.title}
                           >
-                            <span style={eventTitleRow}>
+                            <div style={eventTitleRow}>
                               <span style={eventTitle}>{e.title}</span>
                               <span style={eventStartTime}>
-                                {e.allDay
-                                  ? '終日'
-                                  : formatTime(new Date(e.startAt as string))}
+                                {e.allDay ? '終日' : formatTime(new Date(e.startAt as string))}
                               </span>
-                            </span>
+                            </div>
 
                             {e.owner_name ? (
-                              <span style={eventOwner}>
-                                担当: {e.owner_name}
-                              </span>
+                              <div style={eventOwner}>担当: {e.owner_name}</div>
                             ) : null}
                           </button>
                         ))}
 
                         {hiddenCount > 0 && (
-                          <button
-                            style={moreButton}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleExpandedDate(key);
-                            }}
-                          >
+                          <button style={moreButton} onClick={() => toggleExpandedDate(key)}>
                             {expanded ? '閉じる' : `+${hiddenCount}`}
                           </button>
                         )}
@@ -458,13 +363,12 @@ export default function CalendarMonthPage() {
 
         <EventFormModal
           open={modalOpen}
-          form={form}
           saving={saving}
-          error={error}
-          onChange={setForm}
+          form={form}
+          setForm={setForm}
           onClose={closeModal}
           onSave={handleSave}
-          onDelete={form.id ? handleDelete : undefined}
+          onDelete={handleDelete}
         />
       </div>
     </SchedulerShell>
@@ -477,7 +381,6 @@ function getDayType(date: Date) {
   if (isHoliday(date)) return 'holiday';
   if (day === 0) return 'sunday';
   if (day === 6) return 'saturday';
-
   return 'weekday';
 }
 
@@ -490,7 +393,6 @@ function buildLocalIso(date: string, time: string) {
   const [year, month, day] = date.split('-').map(Number);
   const [hour, minute] = time.split(':').map(Number);
   const localDate = new Date(year, month - 1, day, hour, minute, 0, 0);
-
   return localDate.toISOString();
 }
 
@@ -498,7 +400,6 @@ function formatDateParam(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
-
   return `${y}-${m}-${d}`;
 }
 
@@ -506,7 +407,6 @@ function formatLocalDateKey(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
-
   return `${y}-${m}-${d}`;
 }
 
@@ -514,14 +414,12 @@ function toDateInputValue(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
-
   return `${y}-${m}-${d}`;
 }
 
 function formatTime(date: Date) {
   const h = String(date.getHours()).padStart(2, '0');
   const m = String(date.getMinutes()).padStart(2, '0');
-
   return `${h}:${m}`;
 }
 
@@ -542,7 +440,6 @@ const toolbarLeft: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 12,
-  flexWrap: 'wrap',
 };
 
 const toolbarRight: React.CSSProperties = {
@@ -649,22 +546,6 @@ const cell: React.CSSProperties = {
   display: 'grid',
   alignContent: 'start',
   gap: 6,
-  userSelect: 'none',
-  touchAction: 'none',
-};
-
-const selectedCell: React.CSSProperties = {
-  background: 'linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)',
-  outline: '2px solid rgba(124, 58, 237, 0.45)',
-  outlineOffset: -2,
-};
-
-const mutedCell: React.CSSProperties = {
-  opacity: 0.45,
-};
-
-const todayCell: React.CSSProperties = {
-  boxShadow: 'inset 0 0 0 2px rgba(17, 24, 39, 0.18)',
 };
 
 const sundayCell: React.CSSProperties = {
