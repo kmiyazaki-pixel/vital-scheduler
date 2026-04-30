@@ -18,6 +18,19 @@ import { useEffect, useMemo, useState } from 'react';
 
 const FIXED_CALENDAR_ID = 1;
 
+type NormalizedEvent = EventItem & {
+  calendarId: number;
+  startAt: string;
+  endAt: string;
+  allDay: boolean;
+};
+
+type WeekSpanEvent = NormalizedEvent & {
+  startIndex: number;
+  span: number;
+  lane: number;
+};
+
 export default function CalendarWeekPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -83,53 +96,103 @@ export default function CalendarWeekPage() {
     setCurrentDate(new Date());
   };
 
-  const normalizedEvents = useMemo(() => {
+  const normalizedEvents = useMemo<NormalizedEvent[]>(() => {
     return events.map((e) => ({
       ...e,
-      calendarId: e.calendarId ?? e.calendar_id,
+      memo: e.memo ?? undefined,
+      owner_name: e.owner_name ?? undefined,
+      calendarId: e.calendarId ?? e.calendar_id ?? FIXED_CALENDAR_ID,
       startAt: e.startAt ?? e.start_at,
       endAt: e.endAt ?? e.end_at,
-      allDay: e.allDay ?? e.is_all_day,
+      allDay: e.allDay ?? e.is_all_day ?? false,
     }));
   }, [events]);
 
   const eventsByDate = useMemo(() => {
-  const map = new Map<string, typeof normalizedEvents>();
+    const map = new Map<string, NormalizedEvent[]>();
 
-  for (const e of normalizedEvents) {
-    const start = new Date(e.startAt as string);
-    const end = new Date(e.endAt as string);
+    for (const e of normalizedEvents) {
+      const start = new Date(e.startAt);
+      const end = new Date(e.endAt);
 
-    // 日付ループ用
-    const current = new Date(start);
-    current.setHours(0, 0, 0, 0);
+      const current = new Date(start);
+      current.setHours(0, 0, 0, 0);
 
-    const last = new Date(end);
-    last.setHours(0, 0, 0, 0);
+      const last = new Date(end);
+      last.setHours(0, 0, 0, 0);
 
-    while (current.getTime() <= last.getTime()) {
-      const key = formatLocalDateKey(current);
-
-      const list = map.get(key) ?? [];
-      list.push(e);
-      map.set(key, list);
-
-      current.setDate(current.getDate() + 1);
+      while (current.getTime() <= last.getTime()) {
+        const key = formatLocalDateKey(current);
+        const list = map.get(key) ?? [];
+        list.push(e);
+        map.set(key, list);
+        current.setDate(current.getDate() + 1);
+      }
     }
-  }
 
-  // ソート（そのまま）
-  for (const list of map.values()) {
-    list.sort((a, b) => {
-      return (
-        new Date(a.startAt as string).getTime() -
-        new Date(b.startAt as string).getTime()
-      );
+    return map;
+  }, [normalizedEvents]);
+
+  const spanEvents = useMemo<WeekSpanEvent[]>(() => {
+    const weekStart = new Date(weekDays[0]);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekDays[6]);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const items = normalizedEvents
+      .map((e) => {
+        const start = new Date(e.startAt);
+        const end = new Date(e.endAt);
+
+        if (end < weekStart || start > weekEnd) return null;
+
+        const visibleStart = start < weekStart ? weekStart : start;
+        const visibleEnd = end > weekEnd ? weekEnd : end;
+
+        const startKey = formatLocalDateKey(visibleStart);
+        const endKey = formatLocalDateKey(visibleEnd);
+
+        const startIndex = weekDays.findIndex(
+          (d) => formatLocalDateKey(d) === startKey,
+        );
+        const endIndex = weekDays.findIndex(
+          (d) => formatLocalDateKey(d) === endKey,
+        );
+
+        if (startIndex < 0 || endIndex < 0) return null;
+
+        return {
+          ...e,
+          startIndex,
+          span: endIndex - startIndex + 1,
+          lane: 0,
+        };
+      })
+      .filter((e): e is Omit<WeekSpanEvent, 'lane'> & { lane: number } => e !== null)
+      .sort((a, b) => {
+        if (a.startIndex !== b.startIndex) return a.startIndex - b.startIndex;
+        return b.span - a.span;
+      });
+
+    const laneEnds: number[] = [];
+
+    return items.map((event) => {
+      let lane = laneEnds.findIndex((endIndex) => endIndex < event.startIndex);
+
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(event.startIndex + event.span - 1);
+      } else {
+        laneEnds[lane] = event.startIndex + event.span - 1;
+      }
+
+      return {
+        ...event,
+        lane,
+      };
     });
-  }
-
-  return map;
-}, [normalizedEvents]);
+  }, [normalizedEvents, weekDays]);
 
   const openCreateModal = (date?: Date) => {
     const baseDate = date ? new Date(date) : new Date();
@@ -145,8 +208,16 @@ export default function CalendarWeekPage() {
     setModalOpen(true);
   };
 
-  const openEditModal = (event: (typeof normalizedEvents)[number]) => {
-    setForm(buildFormFromEvent(event));
+  const openEditModal = (event: NormalizedEvent) => {
+    setForm(
+      buildFormFromEvent({
+        ...event,
+        calendar_id: event.calendarId ?? event.calendar_id ?? FIXED_CALENDAR_ID,
+        start_at: event.startAt ?? event.start_at,
+        end_at: event.endAt ?? event.end_at,
+        is_all_day: event.allDay ?? event.is_all_day ?? false,
+      }),
+    );
     setError(null);
     setModalOpen(true);
   };
@@ -265,90 +336,91 @@ export default function CalendarWeekPage() {
         {!loading && (
           <div style={weekScrollWrap}>
             <div style={weekCard}>
-              <div style={weekGrid}>
-                {weekDays.map((date) => {
-                  const key = formatLocalDateKey(date);
-                  const dayEvents = eventsByDate.get(key) ?? [];
-                  const dayType = getDayType(date);
-                  const holidayName = getHolidayName(date);
-                  const isToday = key === todayKey;
+              <div style={weekBoard}>
+                <div style={weekGrid}>
+                  {weekDays.map((date) => {
+                    const key = formatLocalDateKey(date);
+                    const dayEvents = eventsByDate.get(key) ?? [];
+                    const dayType = getDayType(date);
+                    const holidayName = getHolidayName(date);
+                    const isToday = key === todayKey;
 
-                  const headerStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayHeader
-                      : dayType === 'saturday'
-                        ? saturdayHeader
-                        : dayHeader;
+                    const headerStyle =
+                      dayType === 'holiday' || dayType === 'sunday'
+                        ? sundayHeader
+                        : dayType === 'saturday'
+                          ? saturdayHeader
+                          : dayHeader;
 
-                  const dayCardStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayDayCard
-                      : dayType === 'saturday'
-                        ? saturdayDayCard
-                        : dayCard;
+                    const dayCardStyle =
+                      dayType === 'holiday' || dayType === 'sunday'
+                        ? sundayDayCard
+                        : dayType === 'saturday'
+                          ? saturdayDayCard
+                          : dayCard;
 
-                  const dateTextStyle =
-                    dayType === 'holiday' || dayType === 'sunday'
-                      ? sundayDateText
-                      : dayType === 'saturday'
-                        ? saturdayDateText
-                        : normalDateText;
+                    const dateTextStyle =
+                      dayType === 'holiday' || dayType === 'sunday'
+                        ? sundayDateText
+                        : dayType === 'saturday'
+                          ? saturdayDateText
+                          : normalDateText;
 
-                  return (
-                    <div key={key} style={dayColumn}>
-                      <div style={headerStyle}>
-                        <div style={weekdayText}>{formatWeekdayShort(date)}</div>
-                        <div style={dateRow}>
-                          <span
-                            style={{
-                              ...dateTextStyle,
-                              ...(isToday ? todayDateText : {}),
-                            }}
-                          >
-                            {date.getMonth() + 1}/{date.getDate()}
-                          </span>
+                    return (
+                      <div key={key} style={dayColumn}>
+                        <div style={headerStyle}>
+                          <div style={weekdayText}>{formatWeekdayShort(date)}</div>
+                          <div style={dateRow}>
+                            <span
+                              style={{
+                                ...dateTextStyle,
+                                ...(isToday ? todayDateText : {}),
+                              }}
+                            >
+                              {date.getMonth() + 1}/{date.getDate()}
+                            </span>
 
-                          {holidayName ? (
-                            <span style={holidayNameStyle}>{holidayName}</span>
-                          ) : null}
+                            {holidayName ? (
+                              <span style={holidayNameStyle}>{holidayName}</span>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
 
-                      <div style={dayCardStyle}>
-                        <button style={addButton} onClick={() => openCreateModal(date)}>
-                          ＋ この日に予定を追加
-                        </button>
+                        <div style={dayCardStyle}>
+                          <button style={addButton} onClick={() => openCreateModal(date)}>
+                            ＋ この日に予定を追加
+                          </button>
 
-                        <div style={eventList}>
                           {dayEvents.length === 0 ? (
                             <div style={emptyText}>予定なし</div>
                           ) : (
-                            dayEvents.map((e) => (
-                              <button
-                                key={e.id}
-                                style={eventItem}
-                                onClick={() => openEditModal(e)}
-                                title={e.title}
-                              >
-                                <div style={eventTime}>
-                                  {e.allDay
-                                    ? '終日'
-                                    : `${formatTime(new Date(e.startAt as string))} - ${formatTime(
-                                        new Date(e.endAt as string),
-                                      )}`}
-                                </div>
-                                <div style={eventTitle}>{e.title}</div>
-                                {e.owner_name ? (
-                                  <div style={eventOwner}>担当: {e.owner_name}</div>
-                                ) : null}
-                              </button>
-                            ))
+                            <div style={hasEventSpace} />
                           )}
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+
+                <div style={spanLayer}>
+                  {spanEvents.map((e) => (
+                    <button
+                      key={`${e.id}-${e.startIndex}-${e.span}`}
+                      style={{
+                        ...spanEventItem,
+                        gridColumn: `${e.startIndex + 1} / span ${e.span}`,
+                        gridRow: e.lane + 1,
+                      }}
+                      onClick={() => openEditModal(e)}
+                      title={e.title}
+                    >
+                      <span style={spanEventTitle}>{e.title}</span>
+                      {e.owner_name ? (
+                        <span style={spanEventOwner}>　担当: {e.owner_name}</span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -420,12 +492,6 @@ function formatDateLabel(date: Date) {
   const m = date.getMonth() + 1;
   const d = date.getDate();
   return `${y}/${m}/${d}`;
-}
-
-function formatTime(date: Date) {
-  const h = String(date.getHours()).padStart(2, '0');
-  const m = String(date.getMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
 }
 
 const wrap: React.CSSProperties = {
@@ -510,6 +576,10 @@ const weekCard: React.CSSProperties = {
   borderRadius: 24,
   padding: 16,
   boxShadow: '0 14px 30px rgba(91, 98, 133, 0.10)',
+};
+
+const weekBoard: React.CSSProperties = {
+  position: 'relative',
 };
 
 const weekGrid: React.CSSProperties = {
@@ -642,11 +712,6 @@ const addButton: React.CSSProperties = {
   textAlign: 'center',
 };
 
-const eventList: React.CSSProperties = {
-  display: 'grid',
-  gap: 8,
-};
-
 const emptyText: React.CSSProperties = {
   color: '#9ca3af',
   fontSize: 12,
@@ -655,31 +720,48 @@ const emptyText: React.CSSProperties = {
   padding: '16px 4px',
 };
 
-const eventItem: React.CSSProperties = {
+const hasEventSpace: React.CSSProperties = {
+  height: 40,
+};
+
+const spanLayer: React.CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  top: 174,
+  display: 'grid',
+  gridTemplateColumns: 'repeat(7, minmax(130px, 1fr))',
+  gridAutoRows: 30,
+  gap: '6px 10px',
+  pointerEvents: 'none',
+  padding: '0 10px',
+  boxSizing: 'border-box',
+};
+
+const spanEventItem: React.CSSProperties = {
+  pointerEvents: 'auto',
+  height: 26,
   border: 'none',
-  borderRadius: 12,
-  background: 'linear-gradient(135deg, #eef2ff 0%, #e9d5ff 100%)',
-  color: '#312e81',
-  padding: '8px 10px',
+  borderRadius: 999,
+  background: 'linear-gradient(90deg, #a78bfa 0%, #6366f1 100%)',
+  color: '#fff',
+  padding: '0 10px',
   cursor: 'pointer',
   textAlign: 'left',
-  display: 'grid',
-  gap: 3,
-};
-
-const eventTime: React.CSSProperties = {
-  fontSize: 11,
-  color: '#5b6285',
-  fontWeight: 800,
-};
-
-const eventTitle: React.CSSProperties = {
+  overflow: 'hidden',
+  whiteSpace: 'nowrap',
+  textOverflow: 'ellipsis',
   fontWeight: 900,
-  fontSize: 13,
+  boxShadow: '0 6px 14px rgba(99, 102, 241, 0.22)',
 };
 
-const eventOwner: React.CSSProperties = {
+const spanEventTitle: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 900,
+};
+
+const spanEventOwner: React.CSSProperties = {
   fontSize: 11,
-  color: '#5b6285',
-  fontWeight: 700,
+  fontWeight: 800,
+  opacity: 0.95,
 };
