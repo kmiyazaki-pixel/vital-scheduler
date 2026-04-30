@@ -312,7 +312,7 @@ const openEditModal = (event: NormalizedEvent) => {
       ? event.id
       : Number(event.id);
 
-  const category = event.category ?? "仕事";
+  const category: Category = (event.category ?? "仕事") as Category;
 
   setForm(buildFormFromEvent({
     ...event,
