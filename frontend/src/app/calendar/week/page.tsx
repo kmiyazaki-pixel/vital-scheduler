@@ -414,10 +414,10 @@ export default function CalendarWeekPage() {
                       onClick={() => openEditModal(e)}
                       title={e.title}
                     >
-                      <span style={spanEventTitle}>{e.title}</span>
-                      {e.owner_name ? (
-                        <span style={spanEventOwner}>　担当: {e.owner_name}</span>
-                      ) : null}
+                     <span style={spanEventTime}>
+  {e.allDay ? '終日' : formatTime(new Date(e.startAt))}
+</span>
+<span style={spanEventTitle}>{e.title}</span>
                     </button>
                   ))}
                 </div>
@@ -764,4 +764,10 @@ const spanEventOwner: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 800,
   opacity: 0.95,
+};
+
+const spanEventTime: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 900,
+  marginRight: 6,
 };
