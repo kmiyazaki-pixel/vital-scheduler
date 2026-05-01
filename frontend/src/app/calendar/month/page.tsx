@@ -518,11 +518,6 @@ const hiddenCountForDay = Math.max(0, allDayEventsForModal.length - 3);
                             )}
                           </div>
 
-                          {/* spacer for span bands */}
-                          {spanAreaH > 0 && (
-                            <div style={{ height: spanAreaH, flexShrink: 0 }} />
-                          )}
-
                          {/* single-day events */}
 <div style={eventListStyle}>
   {singleEvents.slice(0, 3).map((e) => (
