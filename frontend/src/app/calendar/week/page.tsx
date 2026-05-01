@@ -751,8 +751,8 @@ const spanEventItem: React.CSSProperties = {
   border: 'none',
   borderRadius: 999,
   background:
-  typeof e.color === 'string'
-    ? e.color
+  typeof band.event.color === 'string'
+    ? band.event.color
     : '#8b5cf6',
   color: '#fff',
   padding: '0 10px',
