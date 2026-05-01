@@ -581,6 +581,26 @@ setForm(buildFormFromEvent({
                       </button>
                     );
                   })}
+
+                  {hiddenBandCount > 0 && (
+  <div
+    style={{
+      position: 'absolute',
+      top: DATE_ROW_H + MAX_VISIBLE_EVENTS * LANE_H + 2,
+      right: 6,
+      zIndex: 3,
+      background: '#fff',
+      color: '#111827',
+      borderRadius: 8,
+      padding: '2px 7px',
+      fontSize: 11,
+      fontWeight: 900,
+      boxShadow: '0 2px 8px rgba(15,23,42,0.18)',
+    }}
+  >
+    +{hiddenBandCount}
+  </div>
+)}
                 </div>
               );
             })}
