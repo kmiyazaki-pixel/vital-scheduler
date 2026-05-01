@@ -369,7 +369,6 @@ setForm(buildFormFromEvent({
         start_at: startAt,
         end_at: endAt,
         is_all_day: form.allDay,
-        color: form.color,
       };
       if (form.id) await updateEvent(form.id, payload);
       else await createEvent(payload);
