@@ -523,39 +523,46 @@ const hiddenCountForDay = Math.max(0, allDayEventsForModal.length - 3);
                             <div style={{ height: spanAreaH, flexShrink: 0 }} />
                           )}
 
-                          {/* single-day events */}
-                          <div style={eventListStyle}>
-                            {singleEvents.slice(0, 3).map((e) => (
-                              <button
-  key={String(e.id)}
-  style={{
-    ...eventChip,
-    background: typeof e.color === 'string' ? e.color : '#8b5cf6',
-    color: '#fff',
-  }}
-                                onMouseDown={(ev) => ev.stopPropagation()}
-                                onClick={(ev) => { ev.stopPropagation(); openEditModal(e); }}
-                                title={e.title}
-                              >
-                                <span style={eventChipTime}>
-                                  {e.allDay ? '終日' : formatTime(new Date(e.startAt))}
-                                </span>
-                                <span style={eventChipTitle}>{e.title}</span>
-                              </button>
-                            ))}
-                            {singleEvents.length > 3 && (
-  <button
-    type="button"
-    style={moreButton}
-    onMouseDown={(ev) => ev.stopPropagation()}
-    onClick={(ev) => {
-      ev.stopPropagation();
-      openMoreModal(key, singleEvents);
-    }}
-  >
-    +{singleEvents.length - 3}件
-  </button>
-)}
+                         {/* single-day events */}
+<div style={eventListStyle}>
+  {singleEvents.slice(0, 3).map((e) => (
+    <button
+      key={String(e.id)}
+      style={{
+        ...eventChip,
+        background: typeof e.color === 'string' ? e.color : '#8b5cf6',
+        color: '#fff',
+      }}
+      onMouseDown={(ev) => ev.stopPropagation()}
+      onClick={(ev) => {
+        ev.stopPropagation();
+        openEditModal(e);
+      }}
+      title={e.title}
+    >
+      <span style={eventChipTime}>
+        {e.allDay ? '終日' : formatTime(new Date(e.startAt))}
+      </span>
+      <span style={eventChipTitle}>{e.title}</span>
+    </button>
+  ))}
+
+  {hiddenCountForDay > 0 && (
+    <button
+      type="button"
+      style={moreButton}
+      onMouseDown={(ev) => ev.stopPropagation()}
+      onClick={(ev) => {
+        ev.stopPropagation();
+        openMoreModal(key, allDayEventsForModal);
+      }}
+    >
+      +{hiddenCountForDay}件
+    </button>
+  )}
+</div>
+                          
+
                           </div>
                         </div>
                       );
