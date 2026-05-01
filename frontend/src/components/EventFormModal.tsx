@@ -59,6 +59,7 @@ export function buildFormFromEvent(event: NormalizedEvent): EventFormState {
     endDate: toDateInputValue(end),
     endTime: toTimeInputValue(end),
     allDay: Boolean(event.allDay),
+    color: event.color ?? '#8b5cf6',
   };
 }
 
