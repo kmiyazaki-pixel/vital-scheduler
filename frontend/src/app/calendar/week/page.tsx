@@ -404,14 +404,18 @@ export default function CalendarWeekPage() {
                 </div>
 
                 <div style={spanLayer}>
-                  {spanEvents.map((e) => (
-                    <button
-                      key={`${e.id}-${e.startIndex}-${e.span}`}
-                      style={{
-                        ...spanEventItem,
-                        gridColumn: `${e.startIndex + 1} / span ${e.span}`,
-                        gridRow: e.lane + 1,
-                      }}
+                  <spanEvents.map((e) => (
+  <button
+    key={`${e.id}-${e.startIndex}-${e.span}`}
+    style={{
+      ...spanEventItem,
+      background:
+        typeof e.color === 'string'
+          ? e.color
+          : '#8b5cf6',
+      gridColumn: `${e.startIndex + 1} / span ${e.span}`,
+      gridRow: e.lane + 1,
+    }}
                       onClick={() => openEditModal(e)}
                       title={e.title}
                     >
@@ -750,10 +754,7 @@ const spanEventItem: React.CSSProperties = {
   height: 26,
   border: 'none',
   borderRadius: 999,
-  background:
-  typeof band.event.color === 'string'
-    ? band.event.color
-    : '#8b5cf6',
+  background: '#8b5cf6',
   color: '#fff',
   padding: '0 10px',
   cursor: 'pointer',
