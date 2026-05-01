@@ -542,7 +542,10 @@ setForm(buildFormFromEvent({
                           left,
                           width,
                           height: LANE_H - 2,
-                     　   background: band.event.color as string ?? '#8b5cf6',
+                     　   background:
+ 　　　　　　　　　　　　　　 typeof band.event.color === 'string'
+                              ? band.event.color
+                                : '#8b5cf6',
                           color: '#fff',
                           border: 'none',
                           borderRadius:
