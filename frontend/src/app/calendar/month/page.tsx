@@ -502,8 +502,12 @@ setForm(buildFormFromEvent({
                           <div style={eventListStyle}>
                             {singleEvents.slice(0, 3).map((e) => (
                               <button
-                                key={String(e.id)}
-                                style={eventChip}
+  key={String(e.id)}
+  style={{
+    ...eventChip,
+    background: typeof e.color === 'string' ? e.color : '#8b5cf6',
+    color: '#fff',
+  }}
                                 onMouseDown={(ev) => ev.stopPropagation()}
                                 onClick={(ev) => { ev.stopPropagation(); openEditModal(e); }}
                                 title={e.title}
@@ -538,7 +542,7 @@ setForm(buildFormFromEvent({
                           left,
                           width,
                           height: LANE_H - 2,
-                          background: 'linear-gradient(90deg, #a78bfa, #818cf8)',
+                     　   background: band.event.color as string ?? '#8b5cf6',
                           color: '#fff',
                           border: 'none',
                           borderRadius:
