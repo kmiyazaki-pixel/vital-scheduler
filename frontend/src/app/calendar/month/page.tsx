@@ -127,6 +127,8 @@ export default function CalendarMonthPage() {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EventFormState>(EMPTY_FORM);
+  const [moreModalDate, setMoreModalDate] = useState<string | null>(null);
+  const [moreModalEvents, setMoreModalEvents] = useState<NormalizedEvent[]>([]);
 
   const [dragStart, setDragStart] = useState<string | null>(null);
   const [dragEnd, setDragEnd] = useState<string | null>(null);
@@ -299,6 +301,16 @@ export default function CalendarMonthPage() {
     setError(null);
     setModalOpen(true);
   };
+
+  const openMoreModal = (dateKey: string, events: NormalizedEvent[]) => {
+  setMoreModalDate(dateKey);
+  setMoreModalEvents(events);
+};
+
+const closeMoreModal = () => {
+  setMoreModalDate(null);
+  setMoreModalEvents([]);
+};
 
 const openEditModal = (event: NormalizedEvent) => {
   const calendarId =
@@ -476,6 +488,16 @@ setForm(buildFormFromEvent({
                       const isEnd = selectionRange?.[1] === key;
                       const isSingle = dragStart === dragEnd;
                       const singleEvents = singleDayEventsByDate.get(key) ?? [];
+                      const dayBands = bands.filter((band) => {
+  return di >= band.colStart && di < band.colStart + band.colSpan;
+});
+
+const allDayEventsForModal = [
+  ...dayBands.map((band) => band.event),
+  ...singleEvents,
+];
+
+const hiddenCountForDay = Math.max(0, allDayEventsForModal.length - 3);
 
                       return (
                         <div
@@ -522,8 +544,18 @@ setForm(buildFormFromEvent({
                               </button>
                             ))}
                             {singleEvents.length > 3 && (
-                              <div style={moreLabel}>+{singleEvents.length - 3}件</div>
-                            )}
+  <button
+    type="button"
+    style={moreButton}
+    onMouseDown={(ev) => ev.stopPropagation()}
+    onClick={(ev) => {
+      ev.stopPropagation();
+      openMoreModal(key, singleEvents);
+    }}
+  >
+    +{singleEvents.length - 3}件
+  </button>
+)}
                           </div>
                         </div>
                       );
@@ -581,26 +613,7 @@ setForm(buildFormFromEvent({
                       </button>
                     );
                   })}
-
-                  {hiddenBandCount > 0 && (
-  <div
-    style={{
-      position: 'absolute',
-      top: DATE_ROW_H + MAX_VISIBLE_EVENTS * LANE_H + 2,
-      right: 6,
-      zIndex: 3,
-      background: '#fff',
-      color: '#111827',
-      borderRadius: 8,
-      padding: '2px 7px',
-      fontSize: 11,
-      fontWeight: 900,
-      boxShadow: '0 2px 8px rgba(15,23,42,0.18)',
-    }}
-  >
-    +{hiddenBandCount}
-  </div>
-)}
+                  
                 </div>
               );
             })}
@@ -617,6 +630,41 @@ setForm(buildFormFromEvent({
           </div>
         )}
 
+        {moreModalDate && (
+  <div style={moreModalBackdrop} onClick={closeMoreModal}>
+    <div style={moreModalBox} onClick={(e) => e.stopPropagation()}>
+      <div style={moreModalHeader}>
+        <strong>{moreModalDate} の予定</strong>
+        <button style={moreModalCloseButton} onClick={closeMoreModal}>
+          ×
+        </button>
+      </div>
+
+      <div style={moreModalList}>
+        {moreModalEvents.map((event) => (
+          <button
+            key={String(event.id)}
+            style={{
+              ...moreModalEventButton,
+              background:
+                typeof event.color === 'string' ? event.color : '#8b5cf6',
+            }}
+            onClick={() => {
+              closeMoreModal();
+              openEditModal(event);
+            }}
+          >
+            <span style={moreModalEventTime}>
+              {event.allDay ? '終日' : formatTime(new Date(event.startAt))}
+            </span>
+            <span>{event.title}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+        
         <EventFormModal
           open={modalOpen}
           saving={saving}
@@ -830,6 +878,18 @@ const eventChipTitle: React.CSSProperties = {
 const moreLabel: React.CSSProperties = {
   fontSize: 10, fontWeight: 800, color: '#6366f1', paddingLeft: 4,
 };
+const moreButton: React.CSSProperties = {
+  border: 'none',
+  background: '#fff',
+  color: '#111827',
+  borderRadius: 8,
+  padding: '2px 7px',
+  fontSize: 11,
+  fontWeight: 900,
+  cursor: 'pointer',
+  justifySelf: 'end',
+  boxShadow: '0 2px 8px rgba(15,23,42,0.18)',
+};
 const spanBandTitle: React.CSSProperties = {
   fontSize: 11, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 };
@@ -854,4 +914,64 @@ const selectionIndicator: React.CSSProperties = {
   pointerEvents: 'none',
   zIndex: 9999,
   backdropFilter: 'blur(4px)',
+};
+const moreModalBackdrop: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(15,23,42,0.35)',
+  zIndex: 9998,
+  display: 'grid',
+  placeItems: 'center',
+};
+
+const moreModalBox: React.CSSProperties = {
+  width: 'min(420px, calc(100vw - 32px))',
+  maxHeight: '70vh',
+  overflow: 'auto',
+  background: '#fff',
+  borderRadius: 16,
+  padding: 16,
+  boxShadow: '0 18px 50px rgba(15,23,42,0.25)',
+};
+
+const moreModalHeader: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12,
+  color: '#111827',
+};
+
+const moreModalCloseButton: React.CSSProperties = {
+  border: 'none',
+  background: '#f1f5f9',
+  borderRadius: 999,
+  width: 28,
+  height: 28,
+  cursor: 'pointer',
+  fontWeight: 900,
+};
+
+const moreModalList: React.CSSProperties = {
+  display: 'grid',
+  gap: 8,
+};
+
+const moreModalEventButton: React.CSSProperties = {
+  border: 'none',
+  borderRadius: 8,
+  color: '#fff',
+  padding: '8px 10px',
+  cursor: 'pointer',
+  textAlign: 'left',
+  display: 'flex',
+  gap: 8,
+  alignItems: 'center',
+  fontWeight: 800,
+};
+
+const moreModalEventTime: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 900,
+  flexShrink: 0,
 };
