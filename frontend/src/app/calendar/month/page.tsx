@@ -556,9 +556,7 @@ const hiddenCountForDay = Math.max(0, allDayEventsForModal.length - 3);
     </button>
   )}
 </div>
-                          
-
-                          </div>
+                        
                         </div>
                       );
                     })}
