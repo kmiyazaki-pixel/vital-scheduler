@@ -406,6 +406,7 @@ setForm(buildFormFromEvent({
   const LANE_H = 22;
   const DATE_ROW_H = 30;
   const GAP = 4;
+  const MAX_VISIBLE_EVENTS = 3;
   const weekHeaders = ['日', '月', '火', '水', '木', '金', '土'];
 
   return (
@@ -451,8 +452,10 @@ setForm(buildFormFromEvent({
             {weeks.map((weekDays, wi) => {
               const weekKeys = weekDays.map(formatLocalDateKey);
               const bands = layoutSpanEvents(weekKeys, multiDayEvents);
-              const maxLane = bands.reduce((m, b) => Math.max(m, b.lane), -1);
-              const spanAreaH = maxLane >= 0 ? (maxLane + 1) * LANE_H + 4 : 0;
+              const visibleBands = bands.filter((band) => band.lane < MAX_VISIBLE_EVENTS);  
+              const hiddenBandCount = Math.max(0, bands.length - visibleBands.length);
+             const spanAreaH =
+                 visibleBands.length > 0 ? MAX_VISIBLE_EVENTS * LANE_H + 4 : 0;
 
               return (
                 <div key={wi} style={{ position: 'relative' }}>
@@ -528,7 +531,7 @@ setForm(buildFormFromEvent({
                   </div>
 
                   {/* span band overlay */}
-                  {bands.map((band, bi) => {
+                  {visibleBands.map((band, bi) => {
                     const topPx = DATE_ROW_H + band.lane * LANE_H + 2;
                     const left = `calc(${band.colStart} * ((100% - ${(7 - 1) * GAP}px) / 7 + ${GAP}px))`;
                     const width = `calc(${band.colSpan} * (100% - ${(7 - 1) * GAP}px) / 7 + ${band.colSpan - 1} * ${GAP}px)`;
@@ -542,10 +545,10 @@ setForm(buildFormFromEvent({
                           left,
                           width,
                           height: LANE_H - 2,
-                     　   background:
- 　　　　　　　　　　　　　　 typeof band.event.color === 'string'
+                          background:
+                             typeof band.event.color === 'string'
                               ? band.event.color
-                                : '#8b5cf6',
+                               : '#8b5cf6',
                           color: '#fff',
                           border: 'none',
                           borderRadius:
