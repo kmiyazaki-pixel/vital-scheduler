@@ -542,20 +542,20 @@ const hiddenCountForDay = Math.max(0, allDayEventsForModal.length - 3);
     </button>
   ))}
 
-  {hiddenCountForDay > 0 && (
-    <button
-      type="button"
-      style={moreButton}
-      onMouseDown={(ev) => ev.stopPropagation()}
-      onClick={(ev) => {
-        ev.stopPropagation();
-        openMoreModal(key, allDayEventsForModal);
-      }}
-    >
-      +{hiddenCountForDay}件
-    </button>
-  )}
 </div>
+                    {hiddenCountForDay > 0 && (
+  <button
+    type="button"
+    style={moreButtonInDay}
+    onMouseDown={(ev) => ev.stopPropagation()}
+    onClick={(ev) => {
+      ev.stopPropagation();
+      openMoreModal(key, allDayEventsForModal);
+    }}
+  >
+    +{hiddenCountForDay}件
+  </button>
+)}      
                         
                         </div>
                       );
@@ -974,4 +974,20 @@ const moreModalEventTime: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 900,
   flexShrink: 0,
+};
+
+const moreButtonInDay: React.CSSProperties = {
+  position: 'absolute',
+  right: 6,
+  bottom: 6,
+  zIndex: 5,
+  border: 'none',
+  background: '#fff',
+  color: '#111827',
+  borderRadius: 8,
+  padding: '2px 7px',
+  fontSize: 11,
+  fontWeight: 900,
+  cursor: 'pointer',
+  boxShadow: '0 2px 8px rgba(15,23,42,0.18)',
 };
