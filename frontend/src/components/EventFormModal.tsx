@@ -170,6 +170,25 @@ export default function EventFormModal({
           </label>
         </div>
 
+        <div>
+  <label style={label}>色</label>
+  <div style={colorGrid}>
+    {EVENT_COLORS.map((color) => (
+      <button
+        key={color}
+        type="button"
+        onClick={() => setForm((prev) => ({ ...prev, color }))}
+        style={{
+          ...colorButton,
+          background: color,
+          outline: form.color === color ? '3px solid #111827' : 'none',
+        }}
+        aria-label={`色 ${color}`}
+      />
+    ))}
+  </div>
+</div>
+
         <div style={modalActions}>
           <button style={button} onClick={onClose} disabled={saving}>
             キャンセル
@@ -542,4 +561,30 @@ const dangerButton: React.CSSProperties = {
   padding: '10px 16px',
   cursor: 'pointer',
   fontWeight: 800,
+};
+
+const EVENT_COLORS = [
+  '#8b5cf6',
+  '#6366f1',
+  '#0ea5e9',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#ec4899',
+  '#64748b',
+];
+
+const colorGrid: React.CSSProperties = {
+  display: 'flex',
+  gap: 8,
+  flexWrap: 'wrap',
+};
+
+const colorButton: React.CSSProperties = {
+  width: 28,
+  height: 28,
+  borderRadius: 999,
+  border: '2px solid #fff',
+  cursor: 'pointer',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
 };
