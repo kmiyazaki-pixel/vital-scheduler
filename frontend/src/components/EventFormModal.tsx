@@ -564,14 +564,18 @@ const dangerButton: React.CSSProperties = {
 };
 
 const EVENT_COLORS = [
-  '#8b5cf6',
-  '#6366f1',
-  '#0ea5e9',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#ec4899',
-  '#64748b',
+  '#8b5cf6', // 紫
+  '#2563eb', // 青
+  '#06b6d4', // 水色
+  '#16a34a', // 緑
+  '#84cc16', // 黄緑
+  '#f59e0b', // オレンジ
+  '#ef4444', // 赤
+  '#ec4899', // ピンク
+  '#7c2d12', // 茶色
+  '#475569', // グレー
+  '#111827', // 黒
+  '#14b8a6', // ティール
 ];
 
 const colorGrid: React.CSSProperties = {
