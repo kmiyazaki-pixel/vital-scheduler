@@ -750,7 +750,10 @@ const spanEventItem: React.CSSProperties = {
   height: 26,
   border: 'none',
   borderRadius: 999,
-  background: 'linear-gradient(90deg, #a78bfa 0%, #6366f1 100%)',
+  background:
+  typeof e.color === 'string'
+    ? e.color
+    : '#8b5cf6',
   color: '#fff',
   padding: '0 10px',
   cursor: 'pointer',
