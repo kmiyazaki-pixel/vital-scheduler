@@ -634,7 +634,7 @@ const hiddenCountForDay = Math.max(0, allDayEventsForModal.length - 3);
   <div style={moreModalBackdrop} onClick={closeMoreModal}>
     <div style={moreModalBox} onClick={(e) => e.stopPropagation()}>
       <div style={moreModalHeader}>
-        <strong>{moreModalDate} の予定</strong>
+        <strong>{formatModalDateLabel(moreModalDate)} の予定</strong>
         <button style={moreModalCloseButton} onClick={closeMoreModal}>
           ×
         </button>
@@ -990,4 +990,10 @@ const moreButtonInDay: React.CSSProperties = {
   fontWeight: 900,
   cursor: 'pointer',
   boxShadow: '0 2px 8px rgba(15,23,42,0.18)',
+};
+
+function formatModalDateLabel(dateKey: string) {
+  const date = new Date(`${dateKey}T00:00:00`);
+  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${weekdays[date.getDay()]}）`;
 };
