@@ -77,6 +77,7 @@ export async function createEvent(payload: {
   start_at: string;
   end_at: string;
   is_all_day: boolean;
+  color?: string;
 }) {
   const { user, userName } = await getCurrentUserInfo();
 
@@ -128,6 +129,7 @@ export async function updateEvent(
     start_at: string;
     end_at: string;
     is_all_day: boolean;
+    color?: string;
   }
 ) {
   const { user, userName } = await getCurrentUserInfo();
