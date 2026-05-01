@@ -13,6 +13,7 @@ export type EventFormState = {
   endDate: string;
   endTime: string;
   allDay: boolean;
+  color: string;
 };
 
 type NormalizedEvent = EventItem & {
@@ -41,6 +42,7 @@ export const EMPTY_FORM: EventFormState = {
   endDate: '',
   endTime: '',
   allDay: false,
+  color: '#8b5cf6',
 };
 
 export function buildFormFromEvent(event: NormalizedEvent): EventFormState {
