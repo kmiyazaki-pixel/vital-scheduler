@@ -24,6 +24,7 @@ export type EventItem = {
   end_at: string;
   is_all_day: boolean;
   owner_name?: string | null;
+  color?: string | null;
 };
 
 export type EventPayload = {
