@@ -404,7 +404,7 @@ export default function CalendarWeekPage() {
                 </div>
 
                 <div style={spanLayer}>
-                  <spanEvents.map((e) => (
+                  {spanEvents.map((e) => (
   <button
     key={`${e.id}-${e.startIndex}-${e.span}`}
     style={{
