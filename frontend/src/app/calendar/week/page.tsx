@@ -268,7 +268,6 @@ export default function CalendarWeekPage() {
         start_at: startAt,
         end_at: endAt,
         is_all_day: form.allDay,
-        color: form.color,
       };
 
       if (form.id) {
