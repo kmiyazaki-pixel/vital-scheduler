@@ -518,7 +518,7 @@ const hiddenCountForDay = Math.max(0, allDayEventsForModal.length - 3);
                             )}
                           </div>
 
-                         {/* single-day events */}
+                        {/* single-day events */}
 <div style={eventListStyle}>
   {singleEvents.slice(0, 3).map((e) => (
     <button
